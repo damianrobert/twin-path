@@ -1,0 +1,29 @@
+erDiagram
+    USER ||--o{ USER_ROLE : has
+    ROLE ||--o{ USER_ROLE : includes
+
+    USER ||--o| MENTOR_PROFILE : "may have"
+    USER ||--o| MENTEE_PROFILE : "may have"
+
+    USER ||--o{ PATH : "mentor in"
+    USER ||--o{ PATH : "mentee in"
+
+    PATH ||--o{ CONVERSATION : "may have"
+    CONVERSATION ||--o{ CONVERSATION_PARTICIPANT : has
+    USER ||--o{ CONVERSATION_PARTICIPANT : joins
+    CONVERSATION ||--o{ MESSAGE : contains
+    USER ||--o{ MESSAGE : sends
+
+    USER ||--o{ ARTICLE : writes
+    ARTICLE ||--o{ COMMENT : has
+    USER ||--o{ COMMENT : writes
+    ARTICLE ||--o{ ARTICLE_TOPIC : tagged
+    TOPIC ||--o{ ARTICLE_TOPIC : used_by
+
+    USER ||--o{ REACTION : makes
+
+    USER ||--o{ COURSE : creates
+    COURSE ||--o{ COURSE_MODULE : has
+    COURSE_MODULE ||--o{ COURSE_LESSON : has
+    COURSE ||--o{ ENROLLMENT : has
+    USER ||--o{ ENROLLMENT : enrolls
