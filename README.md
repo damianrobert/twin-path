@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="./public/TwinPath.png" alt="TwinPath preview" width="900" />
+    <img src="./public/TwinPath.png" alt="TwinPath preview" width="500" />
 </p>
 
 # TwinPath — Mentorship Platform (Next.js)
