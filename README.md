@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+![TwinPath preview](./public/TwinPath.png)
 
-## Getting Started
+# TwinPath — Mentorship Platform (Next.js)
 
-First, run the development server:
+A modern mentorship web app where people find trusted mentors in the areas they care about — **Cyber Security**, **Software Development**, **Automation**, and more. Mentors share real-world knowledge through **blog articles**, build structured **courses**, and form **1:1 mentor–mentee relationships** with learning tracks, chat, and video calls.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+> Think of it like a “gym + personal trainer” for skills: mentors provide the plan (track), the lessons (articles/courses), and the coaching (chat/calls) — mentees do the reps and level up.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ✨ Core Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🔎 Discover & Match
 
-## Learn More
+- Browse mentors by category (Cyber Security, Software Dev, Automation, etc.)
+- Filter by skills, level, availability, language, rating
+- Mentor profiles with experience, specialties, and content
 
-To learn more about Next.js, take a look at the following resources:
+### 🧠 Knowledge Sharing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Blog module** for articles, guides, and resources
+- Tags, categories, search, featured posts
+- Draft/publish flow for mentors
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 🎓 Courses & Learning Tracks
 
-## Deploy on Vercel
+- Mentors create structured courses (modules/lessons)
+- Mentees follow a **Track** to master a topic (milestones, checkpoints)
+- Progress tracking (completed lessons, quizzes/tasks—optional)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 🤝 Mentorship Relationships
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Request / accept mentorship
+- Track goals + learning roadmap per mentee
+- Shared space for materials, assignments, feedback
+
+### 💬 Real-time Communication
+
+- Direct messaging between mentee and mentor
+- Notifications for messages, mentorship updates, new content
+
+### 📹 Video Calls (Mentorship Sessions)
+
+- Schedule sessions (calendar integration optional)
+- In-app video calls (WebRTC / third-party provider)
+
+### 🔐 Trust & Safety (Platform-first)
+
+- Mentor verification signals (portfolio, endorsements, moderation)
+- Reporting + moderation workflow (recommended)
+- Access control (roles: admin/mentor/mentee)
+
+---
+
+## 🧱 Tech Stack (typical setup)
+
+- **Next.js** (App Router recommended)
+- **TypeScript**
+- **Auth**: Better Auth
+- **UI**: Tailwind CSS + shadcn/ui
+- **Realtime**: WebSockets / Pusher / Supabase Realtime
+- **Video**: WebRTC (custom) or Daily/Twilio (managed)
+- **Storage**: Convex Baas
+- **Email**: Resend / SendGrid (verification + notifications)
