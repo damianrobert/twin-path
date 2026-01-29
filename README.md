@@ -1,4 +1,6 @@
-![TwinPath preview](./public/TwinPath.png)
+<p align="center">
+    <img src="./public/TwinPath.png" alt="TwinPath preview" width="900" />
+</p>
 
 # TwinPath — Mentorship Platform (Next.js)
 
@@ -52,7 +54,7 @@ A modern mentorship web app where people find trusted mentors in the areas they 
 
 ---
 
-## 🧱 Tech Stack (typical setup)
+## 🧱 Tech Stack
 
 - **Next.js** (App Router recommended)
 - **TypeScript**
