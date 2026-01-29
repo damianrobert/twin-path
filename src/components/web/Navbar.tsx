@@ -10,6 +10,18 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Logo from "./Logo";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Navbar = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -19,19 +31,13 @@ const Navbar = () => {
   return (
     <nav className="w-full py-5 px-2.5 flex items-center justify-between">
       <div className="flex items-center">
-        <div className="flex items-center gap-8">
-          <Link href="/">
-            <h1 className="text-2xl font-bold">
-              Twin<span className="text-purple-600">Path</span>
-            </h1>
-          </Link>
-        </div>
+        <Logo />
 
         <div className="flex items-center gap-2">
           <Link className={buttonVariants({ variant: "ghost" })} href="/">
             Home
           </Link>
-          <Link className={buttonVariants({ variant: "ghost" })} href="#">
+          <Link className={buttonVariants({ variant: "ghost" })} href="/blog">
             Blog
           </Link>
           <Link className={buttonVariants({ variant: "ghost" })} href="#">
@@ -42,34 +48,55 @@ const Navbar = () => {
 
       <div className="flex items-center mx-1">
         {isLoading ? null : isAuthenticated ? (
-          <Button
-            className="mx-1"
-            disabled={isPending}
-            onClick={() =>
-              startTransition(async () => {
-                authClient.signOut({
-                  fetchOptions: {
-                    onSuccess: () => {
-                      toast.success("Logged out successfully!");
-                      router.push("/");
-                    },
-                    onError: (error) => {
-                      toast.error(error.error.message);
-                    },
-                  },
-                });
-              })
-            }
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="size-4 animate-spin"></Loader2>
-                <span>Loading...</span>
-              </>
-            ) : (
-              <span>Logout</span>
-            )}
-          </Button>
+          <>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button className="mx-1">Logout</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent size="sm">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Logout</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to logout?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="hover:bg-zinc-300">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    className="mx-1"
+                    disabled={isPending}
+                    onClick={() =>
+                      startTransition(async () => {
+                        authClient.signOut({
+                          fetchOptions: {
+                            onSuccess: () => {
+                              toast.success("Logged out successfully!");
+                              router.push("/");
+                            },
+                            onError: (error) => {
+                              toast.error(error.error.message);
+                            },
+                          },
+                        });
+                      })
+                    }
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin"></Loader2>
+                        <span>Loading...</span>
+                      </>
+                    ) : (
+                      <span>Logout</span>
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         ) : (
           <div className="flex items-center gap-2">
             <div className="mx-1">
