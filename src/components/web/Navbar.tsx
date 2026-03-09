@@ -51,7 +51,7 @@ const Navbar = () => {
           <>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button className="mx-1 text-red-500">Logout</Button>
+                <Button className="mx-1">Logout</Button>
               </AlertDialogTrigger>
               <AlertDialogContent size="sm">
                 <AlertDialogHeader>
