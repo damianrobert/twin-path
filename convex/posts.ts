@@ -1,21 +1,4 @@
-import { mutation } from "./_generated/server";
-import { ConvexError, v } from "convex/values";
-import { authComponent } from "./auth";
+// This file is temporarily disabled for MVP focus
+// Blog functionality will be re-implemented later in the development cycle
 
-export const createPost = mutation({
-  args: { title: v.string(), body: v.string() },
-  handler: async (ctx, args) => {
-    const user = await authComponent.safeGetAuthUser(ctx);
-
-    if (!user) {
-      throw new ConvexError("Not authenticated");
-    }
-    const blogArticle = await ctx.db.insert("posts", {
-      body: args.body,
-      title: args.title,
-      authorId: user._id,
-    });
-
-    return blogArticle;
-  },
-});
+export const placeholder = "Blog functionality moved to post-MVP phase";
