@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Plus, X } from "lucide-react";
+import { ChevronLeft, Loader2, Plus, X } from "lucide-react";
 import { validateTopicContentAI } from "@/lib/ai-content-filter";
+import { useRouter } from "next/navigation";
 
 const TopicsPage = () => {
   const [newTopicName, setNewTopicName] = useState("");
   const [newTopicDescription, setNewTopicDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   
+  const router = useRouter();
   const topics = useQuery(api.topics.getAllTopics);
   const createTopic = useMutation(api.topics.createTopic);
   const initializeTopics = useMutation(api.topics.initializeDefaultTopics);
@@ -270,6 +272,15 @@ const TopicsPage = () => {
                   );
                 })}
               </div>
+
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => router.push("/dashboard")}
+              >
+              <ChevronLeft />
+                Back to Dashboard
+              </Button>
             </CardContent>
           </Card>
         )}

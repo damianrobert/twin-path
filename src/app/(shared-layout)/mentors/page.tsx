@@ -6,6 +6,7 @@ import { api } from "../../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import MentorProfileModal from "@/components/web/MentorProfileModal";
 import { 
   Search, 
   Filter, 
@@ -76,6 +77,8 @@ const MentorsPage = () => {
   const [experienceFilter, setExperienceFilter] = useState<string>("");
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Get current user to filter them out
   const { isAuthenticated } = useConvexAuth();
@@ -173,6 +176,16 @@ const MentorsPage = () => {
   const handleConnectMentor = (mentorId: string) => {
     // TODO: Implement mentor connection logic
     console.log("Connect to mentor:", mentorId);
+  };
+
+  const handleViewProfile = (mentor: Mentor) => {
+    setSelectedMentor(mentor);
+    setIsProfileModalOpen(true);
+  };
+
+  const handleCloseProfileModal = () => {
+    setIsProfileModalOpen(false);
+    setSelectedMentor(null);
   };
 
   return (
@@ -335,8 +348,8 @@ const MentorsPage = () => {
               <div className="mb-4">
                 <h4 className="font-semibold text-sm mb-2">Expertise Areas</h4>
                 <div className="flex flex-wrap gap-1">
-                  {mentor.topics?.slice(0, 3).map(topic => (
-                    <div key={`${mentor._id}-${topic.topic._id}`} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
+                  {mentor.topics?.slice(0, 3).map((topic: any, index: number) => (
+                    <div key={`${mentor._id}-${topic.topic._id}-${index}`} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
                       {topic.topic.name}
                     </div>
                   ))}
@@ -368,7 +381,11 @@ const MentorsPage = () => {
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Connect
                 </Button>
-                <Button size="sm" variant="outline">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleViewProfile(mentor)}
+                >
                   <User className="h-3 w-3 mr-1" />
                   Profile
                 </Button>
@@ -393,6 +410,13 @@ const MentorsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Mentor Profile Modal */}
+      <MentorProfileModal
+        mentor={selectedMentor}
+        isOpen={isProfileModalOpen}
+        onClose={handleCloseProfileModal}
+      />
     </div>
   );
 };
