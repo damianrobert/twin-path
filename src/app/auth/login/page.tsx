@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 const LoginPage = () => {
   const [isPending, startTransition] = useTransition();
@@ -106,7 +107,7 @@ const LoginPage = () => {
             <Button disabled={isPending}>
               {isPending ? (
                 <>
-                  <Loader2 className="size-4 animate-spin"></Loader2>
+                  <Loader2 className="size-4 animate-spin mb-6"></Loader2>
                   <span>Loading...</span>
                 </>
               ) : (
@@ -115,6 +116,7 @@ const LoginPage = () => {
             </Button>
           </FieldGroup>
         </form>
+        <Link className="text-sm text-muted-foreground hover:text-white" href="/auth/sign-up">Don't have an account? Register</Link>
       </CardContent>
     </Card>
   );

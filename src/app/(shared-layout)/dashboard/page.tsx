@@ -2,14 +2,27 @@
 
 import React from "react";
 import { useQuery } from "convex/react";
+import { useConvexAuth } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import clsx from "clsx";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const DashboardPage = () => {
   const currentProfile = useQuery(api.users.getCurrentProfile);
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const router = useRouter();
+
+  // Redirect to login if user is not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/auth/login");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   if (currentProfile === undefined) {
     return (
@@ -101,9 +114,9 @@ const DashboardPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full" disabled>
-                Coming Soon
-              </Button>
+              <Link className={clsx(buttonVariants({ variant: "outline" }), "w-full")} href="/mentors">
+                Find your mentor
+              </Link>
             </CardContent>
           </Card>
         )}

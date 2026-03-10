@@ -43,7 +43,7 @@ const Navbar = () => {
           <Link className={buttonVariants({ variant: "ghost" })} href="/blog">
             Blog
           </Link>
-          <Link className={buttonVariants({ variant: "ghost" })} href="#">
+          <Link className={buttonVariants({ variant: "ghost" })} href="/mentors">
             Find mentor
           </Link>
         </div>
@@ -77,7 +77,8 @@ const Navbar = () => {
                           fetchOptions: {
                             onSuccess: () => {
                               toast.success("Logged out successfully!");
-                              router.push("/");
+                              // Use hard redirect to ensure clean state
+                              window.location.href = "/";
                             },
                             onError: (error) => {
                               toast.error(error.error.message);

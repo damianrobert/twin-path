@@ -24,7 +24,7 @@ import { api } from "../../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
 import { useTransition } from "react";
-import { Loader2, Briefcase, Github, Linkedin, Globe, GraduationCap } from "lucide-react";
+import { Loader2, Briefcase, Github, Linkedin, Globe, GraduationCap, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -34,6 +34,13 @@ const EnhancedProfilePage = () => {
   const mutation = useMutation(api.users.createOrUpdateProfile);
   const currentProfile = useQuery(api.users.getCurrentProfile);
   const { isAuthenticated, isLoading } = useConvexAuth();
+
+  // Redirect to login if user is not authenticated
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/auth/login");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   const form = useForm({
     resolver: zodResolver(enhancedProfileSchema),
@@ -100,6 +107,8 @@ const EnhancedProfilePage = () => {
   return (
     <div className="py-8">
       <div className="text-center mb-12">
+
+        
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
           {currentProfile?._id ? "Edit Your Profile" : "Create Your Profile"}
         </h1>
@@ -110,6 +119,7 @@ const EnhancedProfilePage = () => {
           }
         </p>
       </div>
+
 
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Basic Profile Section */}
@@ -388,6 +398,17 @@ const EnhancedProfilePage = () => {
                 currentProfile?._id ? "Update Profile" : "Create Profile"
               )}
             </Button>
+
+            
+              <Button
+            variant="outline"
+            className="w-full mt-4"
+            onClick={() => router.push("/dashboard")}
+              >
+            <ChevronLeft />
+            Back to Dashboard
+          </Button>
+            
           </CardContent>
         </Card>
       </div>

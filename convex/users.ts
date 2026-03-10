@@ -2,6 +2,65 @@ import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import { authComponent } from "./auth";
 
+// Admin-only mutation for seeding mentor profiles (bypasses authentication)
+export const seedMentorProfile = mutation({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    role: v.union(v.literal("mentor"), v.literal("mentee"), v.literal("both")),
+    bio: v.optional(v.string()),
+    availability: v.optional(v.string()),
+    // Mentor-specific fields
+    professionalExperience: v.optional(v.string()),
+    portfolioUrl: v.optional(v.string()),
+    githubUrl: v.optional(v.string()),
+    linkedinUrl: v.optional(v.string()),
+    yearsOfExperience: v.optional(v.number()),
+    teachingExperience: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Check if user profile already exists
+    const existingProfile = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (existingProfile) {
+      // Update existing profile
+      await ctx.db.patch(existingProfile._id, {
+        name: args.name,
+        role: args.role,
+        bio: args.bio,
+        availability: args.availability,
+        professionalExperience: args.professionalExperience,
+        portfolioUrl: args.portfolioUrl,
+        githubUrl: args.githubUrl,
+        linkedinUrl: args.linkedinUrl,
+        yearsOfExperience: args.yearsOfExperience,
+        teachingExperience: args.teachingExperience,
+      });
+      return existingProfile._id;
+    } else {
+      // Create new profile
+      const profileId = await ctx.db.insert("users", {
+        email: args.email,
+        name: args.name,
+        role: args.role,
+        bio: args.bio,
+        availability: args.availability,
+        professionalExperience: args.professionalExperience,
+        portfolioUrl: args.portfolioUrl,
+        githubUrl: args.githubUrl,
+        linkedinUrl: args.linkedinUrl,
+        yearsOfExperience: args.yearsOfExperience,
+        teachingExperience: args.teachingExperience,
+        createdAt: Date.now(),
+      });
+      return profileId;
+    }
+  },
+});
+
 // Create or update user profile
 export const createOrUpdateProfile = mutation({
   args: {
@@ -124,6 +183,27 @@ export const getMentors = query({
       )
       .collect();
     return mentors;
+  },
+});
+
+// Get all user topics (for admin/seeding purposes)
+export const getAllUserTopics = query({
+  args: {},
+  handler: async (ctx) => {
+    const userTopics = await ctx.db.query("userTopics").collect();
+
+    // Fetch topic details for each user topic
+    const userTopicsWithDetails = await Promise.all(
+      userTopics.map(async (userTopic) => {
+        const topic = await ctx.db.get(userTopic.topicId);
+        return {
+          ...userTopic,
+          topic,
+        };
+      })
+    );
+
+    return userTopicsWithDetails;
   },
 });
 

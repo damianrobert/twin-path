@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -134,6 +135,8 @@ const SignUpPage = () => {
             </Button>
           </FieldGroup>
         </form>
+
+        <Link className="text-sm text-muted-foreground hover:text-white" href="/auth/login">Already have an account? Login</Link>
       </CardContent>
     </Card>
   );

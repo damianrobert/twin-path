@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:mentors": "npx tsx scripts/seed-mentors.ts"
   },
   "dependencies": {
     "@convex-dev/better-auth": "^0.10.10",

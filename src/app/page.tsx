@@ -1,11 +1,13 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, BookOpen, Target, MessageCircle, Award, Shield, Zap, Footprints, Loader2 } from "lucide-react";
 import Logo from "@/components/web/Logo";
 import { useQuery } from "convex/react";
+import { useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -13,16 +15,29 @@ import { useEffect } from "react";
 export default function LandingPage() {
   const router = useRouter();
   const currentProfile = useQuery(api.users.getCurrentProfile);
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const [queryTimedOut, setQueryTimedOut] = React.useState(false);
+
+  // Add timeout for the profile query specifically
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (currentProfile === undefined) {
+        setQueryTimedOut(true);
+      }
+    }, 3000); // 3 second timeout for profile query
+
+    return () => clearTimeout(timeout);
+  }, [currentProfile]);
 
   useEffect(() => {
-    // If user is authenticated (has a profile), redirect to dashboard
-    if (currentProfile) {
+    // Only redirect if user is authenticated AND has a profile AND query hasn't timed out
+    if (isAuthenticated && currentProfile && authLoading === false && !queryTimedOut) {
       router.push("/dashboard");
     }
-  }, [currentProfile, router]);
+  }, [isAuthenticated, currentProfile, authLoading, router, queryTimedOut]);
 
-  // Show loading while checking authentication
-  if (currentProfile === undefined) {
+  // Show loading only while auth is loading and query hasn't timed out
+  if (authLoading || (!queryTimedOut && currentProfile === undefined)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="size-8 animate-spin" />
@@ -30,10 +45,13 @@ export default function LandingPage() {
     );
   }
 
-  // If user has a profile, don't render the landing page (redirecting)
-  if (currentProfile) {
+  // If user is authenticated and has a profile (and query didn't time out), don't render landing page
+  if (isAuthenticated && currentProfile && !queryTimedOut) {
     return null;
   }
+
+  // If query timed out but user is authenticated, show landing page anyway
+  // This prevents infinite loading during logout
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}
@@ -43,7 +61,7 @@ export default function LandingPage() {
             <Logo />
             <div className="flex items-center space-x-4">
               <Link href="/dashboard">
-                <Button variant="ghost">Dashboard</Button>
+                <Button variant="secondary">Dashboard</Button>
               </Link>
               <Link href="/auth/login">
                 <Button>Get Started</Button>
