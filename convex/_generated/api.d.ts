@@ -10,6 +10,8 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as mentorshipRequests from "../mentorshipRequests.js";
+import type * as mentorships from "../mentorships.js";
 import type * as posts from "../posts.js";
 import type * as topics from "../topics.js";
 import type * as users from "../users.js";
@@ -23,6 +25,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  mentorshipRequests: typeof mentorshipRequests;
+  mentorships: typeof mentorships;
   posts: typeof posts;
   topics: typeof topics;
   users: typeof users;

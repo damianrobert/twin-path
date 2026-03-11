@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,17 @@ import {
   Globe,
   Star,
   MessageCircle,
-  ArrowLeft
+  ArrowLeft,
+  Send
 } from "lucide-react";
+import MentorshipRequestModal from "./MentorshipRequestModal";
+import { useConvexAuth } from "convex/react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 
 interface Mentor {
-  _id: string;
+  _id: Id<"users">;
   name: string;
   bio?: string;
   role: "mentor" | "mentee" | "both";
@@ -34,7 +40,7 @@ interface Mentor {
   availability?: string;
   topics?: Array<{
     topic: {
-      _id: string;
+      _id: Id<"topics">;
       name: string;
       description?: string;
     };
@@ -50,6 +56,10 @@ interface MentorProfileModalProps {
 }
 
 const MentorProfileModal: React.FC<MentorProfileModalProps> = ({ mentor, isOpen, onClose }) => {
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const { isAuthenticated } = useConvexAuth();
+  const currentProfile = useQuery(api.users.getCurrentProfile);
+
   if (!isOpen || !mentor) return null;
 
   const expertiseTopics = mentor.topics?.filter(t => t.type === "expertise") || [];
@@ -248,9 +258,14 @@ const MentorProfileModal: React.FC<MentorProfileModalProps> = ({ mentor, isOpen,
               <ArrowLeft className="h-4 w-4" />
               Back to Mentors
             </Button>
-            <Button className="flex-1" size="lg">
-              <Mail className="h-4 w-4 mr-2" />
-              Connect with Mentor
+            <Button 
+              className="flex-1" 
+              size="lg"
+              onClick={() => setIsRequestModalOpen(true)}
+              disabled={!isAuthenticated || currentProfile?._id === mentor._id}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {currentProfile?._id === mentor._id ? "Your Profile" : "Connect with Mentor"}
             </Button>
             <Button variant="outline" size="lg">
               <MessageCircle className="h-4 w-4 mr-2" />
@@ -259,6 +274,13 @@ const MentorProfileModal: React.FC<MentorProfileModalProps> = ({ mentor, isOpen,
           </div>
         </div>
       </div>
+
+      {/* Mentorship Request Modal */}
+      <MentorshipRequestModal
+        mentor={mentor}
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+      />
     </div>
   );
 };

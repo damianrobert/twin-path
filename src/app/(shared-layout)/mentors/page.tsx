@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MentorProfileModal from "@/components/web/MentorProfileModal";
+import MentorshipRequestModal from "@/components/web/MentorshipRequestModal";
 import { 
   Search, 
   Filter, 
@@ -49,7 +51,7 @@ const getInitials = (name: string) => {
 };
 
 interface Mentor {
-  _id: string;
+  _id: Id<"users">;
   name: string;
   bio?: string;
   role: "mentor" | "mentee" | "both";
@@ -62,7 +64,7 @@ interface Mentor {
   availability?: string;
   topics?: Array<{
     topic: {
-      _id: string;
+      _id: Id<"topics">;
       name: string;
       description?: string;
     };
@@ -76,9 +78,11 @@ const MentorsPage = () => {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [experienceFilter, setExperienceFilter] = useState<string>("");
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [selectedMentorForRequest, setSelectedMentorForRequest] = useState<Mentor | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Get current user to filter them out
   const { isAuthenticated } = useConvexAuth();
@@ -88,6 +92,7 @@ const MentorsPage = () => {
   const mentors = useQuery(api.users.getMentors);
   const allTopicsQuery = useQuery(api.topics.getAllTopics);
   const allUserTopics = useQuery(api.users.getAllUserTopics) || [];
+  const userMentorships = useQuery(api.mentorships.getUserMentorships);
 
   // Create a map of userId to topics for efficient lookup
   const userTopicsMap = React.useMemo(() => {
@@ -101,24 +106,37 @@ const MentorsPage = () => {
     return map;
   }, [allUserTopics]);
 
-  // Combine mentors with their topics and filter out current user
+  // Combine mentors with their topics and filter out current user and mentors with active mentorships
   const mentorsWithTopics = React.useMemo(() => {
     if (!mentors) return [];
+    
+    // Get IDs of mentors with whom user has active mentorships
+    const activeMentorIds = userMentorships
+      ? userMentorships
+          .filter(m => m.status === "active")
+          .map(m => m.mentorId)
+      : [];
+    
     return mentors
       .filter(mentor => {
         // Filter out current user if they're a mentor
-        return !currentUser || mentor._id !== currentUser._id;
+        if (currentUser && mentor._id === currentUser._id) return false;
+        
+        // Filter out mentors with whom user already has active mentorships
+        if (activeMentorIds.includes(mentor._id)) return false;
+        
+        return true;
       })
       .map(mentor => ({
         ...mentor,
         topics: userTopicsMap.get(mentor._id) || []
       }));
-  }, [mentors, userTopicsMap, currentUser]);
+  }, [mentors, userTopicsMap, currentUser, userMentorships]);
 
   // Create a combined list of all topics from mentors
   const allTopics = React.useMemo(() => {
     return Array.from(new Set(
-      mentorsWithTopics.flatMap(mentor => mentor.topics?.map(userTopic => userTopic.topic) || [])
+      mentorsWithTopics.flatMap(mentor => mentor.topics?.map((userTopic: any) => userTopic.topic) || [])
     ));
   }, [mentorsWithTopics]);
 
@@ -127,12 +145,12 @@ const MentorsPage = () => {
     return mentorsWithTopics.filter(mentor => {
       const matchesSearch = mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            mentor.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           mentor.topics?.some(userTopic => 
+                           mentor.topics?.some((userTopic: any) => 
                              userTopic.topic?.name.toLowerCase().includes(searchTerm.toLowerCase())
                            );
 
       const matchesTopics = selectedTopics.length === 0 ||
-                           mentor.topics?.some(userTopic => 
+                           mentor.topics?.some((userTopic: any) => 
                              selectedTopics.includes(userTopic.topic?._id)
                            );
 
@@ -173,9 +191,14 @@ const MentorsPage = () => {
     setAvailabilityFilter("");
   };
 
-  const handleConnectMentor = (mentorId: string) => {
-    // TODO: Implement mentor connection logic
-    console.log("Connect to mentor:", mentorId);
+  const handleConnectMentor = (mentor: Mentor) => {
+    setSelectedMentorForRequest(mentor);
+    setIsRequestModalOpen(true);
+  };
+
+  const handleCloseRequestModal = () => {
+    setIsRequestModalOpen(false);
+    setSelectedMentorForRequest(null);
   };
 
   const handleViewProfile = (mentor: Mentor) => {
@@ -376,7 +399,7 @@ const MentorsPage = () => {
                 <Button 
                   size="sm" 
                   className="flex-1"
-                  onClick={() => handleConnectMentor(mentor._id)}
+                  onClick={() => handleConnectMentor(mentor)}
                 >
                   <MessageCircle className="h-3 w-3 mr-1" />
                   Connect
@@ -416,6 +439,13 @@ const MentorsPage = () => {
         mentor={selectedMentor}
         isOpen={isProfileModalOpen}
         onClose={handleCloseProfileModal}
+      />
+
+      {/* Mentorship Request Modal */}
+      <MentorshipRequestModal
+        mentor={selectedMentorForRequest}
+        isOpen={isRequestModalOpen}
+        onClose={handleCloseRequestModal}
       />
     </div>
   );

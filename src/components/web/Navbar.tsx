@@ -8,9 +8,11 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Logo from "./Logo";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +29,7 @@ const Navbar = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const unreadRequestCount = useQuery(api.mentorshipRequests.getUnreadRequestCount);
 
   return (
     <nav className="w-full py-5 px-2.5 flex items-center justify-between">
@@ -46,6 +49,18 @@ const Navbar = () => {
           <Link className={buttonVariants({ variant: "ghost" })} href="/mentors">
             Find mentor
           </Link>
+          {isAuthenticated && (
+            <Link className={buttonVariants({ variant: "ghost" })} href="/mentorship-requests">
+              <div className="flex items-center gap-2">
+                Mentorship Requests
+                {unreadRequestCount !== undefined && unreadRequestCount !== null && unreadRequestCount > 0 && (
+                  <div className="relative">
+                    <div className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></div>
+                  </div>
+                )}
+              </div>
+            </Link>
+          )}
         </div>
       </div>
 

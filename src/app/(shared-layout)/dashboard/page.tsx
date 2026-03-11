@@ -16,6 +16,7 @@ const DashboardPage = () => {
   const currentProfile = useQuery(api.users.getCurrentProfile);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
+  const userMentorships = useQuery(api.mentorships.getUserMentorships);
 
   // Redirect to login if user is not authenticated
   useEffect(() => {
@@ -89,21 +90,30 @@ const DashboardPage = () => {
           </CardContent>
         </Card>
 
-        {(currentProfile.role === "mentor" || currentProfile.role === "both") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>My Mentorships</CardTitle>
-              <CardDescription>
-                View and manage your active mentorships
-              </CardDescription>
-            </CardHeader>
+        <Card>
+          <CardHeader>
+            <CardTitle>My Mentorships</CardTitle>
+            <CardDescription>
+              {userMentorships && userMentorships.length > 0 
+                ? `You have ${userMentorships.filter(m => m.status === "active").length} active mentorship(s)`
+                : "View and manage your active mentorships"
+              }
+            </CardDescription>
+          </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full" disabled>
-              Coming Soon
-            </Button>
+            {userMentorships && userMentorships.some(m => m.status === "active") ? (
+              <Link href="/mentorship-requests">
+                <Button variant="outline" className="w-full">
+                  View All Mentorships
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="outline" className="w-full" disabled>
+                No Active Mentorships
+              </Button>
+            )}
           </CardContent>
         </Card>
-        )}
 
         {(currentProfile.role === "mentee" || currentProfile.role === "both") && (
           <Card>

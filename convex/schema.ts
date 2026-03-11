@@ -19,6 +19,14 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 
+  // Blog Posts
+  posts: defineTable({
+    title: v.string(),
+    body: v.string(),
+    authorId: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_author", ["authorId"]),
+
   // Topics
   topics: defineTable({
     name: v.string(),
