@@ -55,32 +55,48 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
       
       if (uploadedFiles.length > 0) {
         for (const file of uploadedFiles) {
-          // Get upload URL
-          const uploadUrl = await generateUploadUrl();
-          
-          // Upload file to Convex storage
-          const response = await fetch(uploadUrl, {
-            method: "POST",
-            headers: { "Content-Type": file.type },
-            body: file,
-          });
-          
-          if (!response.ok) {
-            throw new Error("Failed to upload file");
-          }
-          
-          const { storageId } = await response.json();
-          
-          // Get file URL
-          const fileUrl = await storeUploadedFile({ storageId });
-          
-          if (fileUrl) {
-            uploadedFileData.push({
-              url: fileUrl,
-              name: file.name,
-              size: file.size,
-              type: file.type,
+          try {
+            console.log(`Starting upload for file: ${file.name}, type: ${file.type}, size: ${file.size}`);
+            
+            // Get upload URL
+            const uploadUrl = await generateUploadUrl();
+            console.log(`Got upload URL: ${uploadUrl}`);
+            
+            // Upload file to Convex storage
+            const response = await fetch(uploadUrl, {
+              method: "POST",
+              body: file,
             });
+            
+            console.log(`Upload response status: ${response.status}`);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`Upload failed for file "${file.name}". Status: ${response.status}, Error: ${errorText}`);
+              throw new Error(`Upload failed for file "${file.name}". Server returned ${response.status}: ${errorText}`);
+            }
+            
+            const { storageId } = await response.json();
+            console.log(`Got storage ID: ${storageId}`);
+            
+            // Get file URL
+            const fileUrl = await storeUploadedFile({ storageId });
+            console.log(`Got file URL: ${fileUrl}`);
+            
+            if (fileUrl) {
+              uploadedFileData.push({
+                url: fileUrl,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+              });
+            } else {
+              throw new Error(`Failed to store file "${file.name}" - no URL returned`);
+            }
+          } catch (error) {
+            console.error(`Error uploading file "${file.name}":`, error);
+            toast.error(`Failed to upload file "${file.name}". ${error instanceof Error ? error.message : 'Please try again.'}`);
+            throw error; // Re-throw to stop the assignment creation process
           }
         }
       }
@@ -124,7 +140,51 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    console.log('Files selected:', files.map(f => ({ name: f.name, type: f.type, size: f.size })));
+    
+    // Check file sizes (Convex supports any file type, but we should limit size)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    for (const file of files) {
+      // Check file size
+      if (file.size > maxSize) {
+        toast.error(`File "${file.name}" is too large. Maximum size is 10MB.`);
+        return;
+      }
+    }
+    
     setUploadedFiles(prev => [...prev, ...files]);
+    console.log('Files added to upload list:', uploadedFiles.length + files.length);
+  };
+
+  const getFileEmoji = (fileName: string, fileType: string): string => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    // Common file types
+    switch (extension) {
+      case 'pdf': return '📄';
+      case 'doc': case 'docx': return '📝';
+      case 'txt': return '📃';
+      case 'log': return '📋';
+      case 'jpg': case 'jpeg': case 'png': case 'gif': case 'svg': return '🖼️';
+      case 'mp4': case 'avi': case 'mov': return '🎬';
+      case 'mp3': case 'wav': case 'flac': return '🎵';
+      case 'zip': case 'rar': case '7z': return '📦';
+      case 'csv': case 'xlsx': case 'xls': return '📊';
+      case 'json': case 'xml': return '🔧';
+      case 'html': case 'css': case 'js': case 'ts': case 'jsx': case 'tsx': return '💻';
+      case 'py': case 'java': case 'cpp': case 'c': return '⌨️';
+      case 'md': return '📖';
+      default:
+        // Fallback based on MIME type
+        if (fileType.startsWith('image/')) return '🖼️';
+        if (fileType.startsWith('video/')) return '🎬';
+        if (fileType.startsWith('audio/')) return '🎵';
+        if (fileType.startsWith('text/')) return '📃';
+        if (fileType.includes('pdf')) return '📄';
+        if (fileType.includes('document')) return '📝';
+        return '📎'; // Default file emoji
+    }
   };
 
   const removeFile = (index: number) => {
@@ -206,7 +266,7 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
                 <Upload className="h-4 w-4" />
                 Attach Files (Optional)
               </Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
                 <input
                   type="file"
                   multiple
@@ -219,12 +279,12 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
                   htmlFor="file-upload"
                   className="cursor-pointer flex flex-col items-center justify-center text-center"
                 >
-                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-foreground">
                     Click to upload files or drag and drop
                   </p>
-                  <p className="text-xs text-gray-500">
-                    PDF, DOC, DOCX, images up to 10MB each
+                  <p className="text-xs text-muted-foreground">
+                    Any file type supported (max 10MB each)
                   </p>
                 </label>
               </div>
@@ -236,9 +296,14 @@ const CreateAssignmentModal: React.FC<CreateAssignmentModalProps> = ({
                   {uploadedFiles.map((file, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-2 bg-slate-800 rounded"
+                      className="flex items-center justify-between p-2 bg-muted rounded"
                     >
-                      <span className="text-sm text-foreground truncate">{file.name}</span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-lg">
+                          {getFileEmoji(file.name, file.type)}
+                        </span>
+                        <span className="text-sm text-foreground truncate">{file.name}</span>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"

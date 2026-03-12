@@ -14,11 +14,19 @@ import {
   Calendar, 
   Clock, 
   CheckCircle, 
+  CheckCircle2,
   AlertCircle,
   PlayCircle,
   Eye,
   Download,
-  X
+  X,
+  Flag,
+  Circle,
+  Trophy,
+  MoveDown,
+  Star,
+  Award,
+  Edit
 } from "lucide-react";
 import Link from "next/link";
 import CreateAssignmentModal from "./CreateAssignmentModal";
@@ -43,6 +51,8 @@ interface Assignment {
   createdAt: number;
   completedAt?: number;
   dueDate?: number;
+  grade?: number; // Grade might not exist for older assignments
+  feedback?: string; // Feedback might not exist for older assignments
 }
 
 const AssignmentsList: React.FC<AssignmentsListProps> = ({ 
@@ -53,6 +63,7 @@ const AssignmentsList: React.FC<AssignmentsListProps> = ({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<Id<"assignments"> | null>(null);
   const [scoringAssignmentId, setScoringAssignmentId] = useState<Id<"assignments"> | null>(null);
+  const [menteeUploadFiles, setMenteeUploadFiles] = useState<{[key: string]: File[]}>({});
   const [confirmAction, setConfirmAction] = useState<{
     isOpen: boolean;
     assignmentId: Id<"assignments"> | null;
@@ -72,6 +83,9 @@ const AssignmentsList: React.FC<AssignmentsListProps> = ({
   });
   
   const updateStatus = useMutation(api.assignments.updateAssignmentStatus);
+  const uploadAssignmentFiles = useMutation(api.assignments.uploadAssignmentFiles);
+  const generateUploadUrl = useMutation(api.assignments.generateUploadUrl);
+  const storeUploadedFile = useMutation(api.assignments.storeUploadedFile);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -149,6 +163,65 @@ const AssignmentsList: React.FC<AssignmentsListProps> = ({
     }
   };
 
+  const handleMenteeFileUpload = async (assignmentId: Id<"assignments">) => {
+    const files = menteeUploadFiles[assignmentId] || [];
+    if (files.length === 0) {
+      toast.error("Please select files to upload");
+      return;
+    }
+
+    try {
+      // Upload files first
+      let uploadedFileData: Array<{url: string, name: string, size: number, type: string}> = [];
+      
+      for (const file of files) {
+        // Get upload URL
+        const uploadUrl = await generateUploadUrl();
+        
+        // Upload file to Convex storage
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          body: file,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Upload failed for file "${file.name}". Server returned ${response.status}`);
+        }
+        
+        const { storageId } = await response.json();
+        
+        // Get file URL
+        const fileUrl = await storeUploadedFile({ storageId });
+        
+        if (fileUrl) {
+          uploadedFileData.push({
+            url: fileUrl,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          });
+        } else {
+          throw new Error(`Failed to store file "${file.name}"`);
+        }
+      }
+
+      // Upload files to assignment
+      await uploadAssignmentFiles({
+        assignmentId,
+        files: uploadedFileData,
+        isMentor: false,
+      });
+
+      // Clear uploaded files for this assignment
+      setMenteeUploadFiles(prev => ({ ...prev, [assignmentId]: [] }));
+      
+      toast.success("Files uploaded successfully!");
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload files");
+    }
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString();
   };
@@ -197,8 +270,49 @@ const getFileIcon = (extension: string) => {
     gif: '🖼️',
     zip: '📦',
     rar: '📦',
+    log: '📋',
+    md: '📖',
+    csv: '📊',
+    json: '🔧',
+    xml: '🔧',
+    html: '💻',
+    css: '💻',
+    js: '💻',
+    ts: '💻',
+    py: '🐍',
+    java: '☕',
   };
-  return iconMap[extension] || '📄';
+  return iconMap[extension.toLowerCase()] || '📎';
+};
+
+const getFileEmoji = (fileName: string, fileType: string): string => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  
+  // Common file types
+  switch (extension) {
+    case 'pdf': return '📄';
+    case 'doc': case 'docx': return '📝';
+    case 'txt': return '📃';
+    case 'log': return '📋';
+    case 'jpg': case 'jpeg': case 'png': case 'gif': case 'svg': return '🖼️';
+    case 'mp4': case 'avi': case 'mov': return '🎬';
+    case 'mp3': case 'wav': case 'flac': return '🎵';
+    case 'zip': case 'rar': case '7z': return '📦';
+    case 'csv': case 'xlsx': case 'xls': return '📊';
+    case 'json': case 'xml': return '🔧';
+    case 'html': case 'css': case 'js': case 'ts': case 'jsx': case 'tsx': return '💻';
+    case 'py': case 'java': case 'cpp': case 'c': return '⌨️';
+    case 'md': return '📖';
+    default:
+      // Fallback based on MIME type
+      if (fileType.startsWith('image/')) return '🖼️';
+      if (fileType.startsWith('video/')) return '🎬';
+      if (fileType.startsWith('audio/')) return '🎵';
+      if (fileType.startsWith('text/')) return '📃';
+      if (fileType.includes('pdf')) return '📄';
+      if (fileType.includes('document')) return '📝';
+      return '📎'; // Default file emoji
+  }
 };
 
 const formatFileSize = (bytes: number) => {
@@ -277,29 +391,117 @@ const getDueDateStatus = (dueDate?: number) => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {assignments.map((assignment) => (
-            <Card key={assignment._id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold">{assignment.title}</h4>
-                      {getStatusBadge(assignment.status)}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>Created: {formatDate(assignment.createdAt)}</span>
-                      {assignment.dueDate && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Due: {formatDate(assignment.dueDate)}
-                        </span>
-                      )}
-                      {assignment.dueDate && getDueDateStatus(assignment.dueDate)}
-                    </div>
+        <div className="relative">
+          {/* Assignment Cards with Roadmap Points */}
+          <div className="space-y-6">
+            {assignments.map((assignment, index) => (
+              <div key={assignment._id} className="relative flex items-start">
+                {/* Roadmap Point */}
+                <div className="absolute left-6 flex flex-col items-center">
+                  <div className="relative z-10">
+                    {index === 0 ? (
+                      // Start line - first assignment
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${
+                        assignment.status === "completed" || assignment.status === "reviewed"
+                          ? 'bg-green-500 border-green-200 text-white' 
+                          : assignment.status === "in_progress"
+                          ? 'bg-yellow-500 border-yellow-200 text-white'
+                          : 'bg-background border-muted text-muted-foreground'
+                      }`}>
+                        <Flag className="h-5 w-5" />
+                      </div>
+                    ) : index === assignments.length - 1 ? (
+                      // Finish line - last assignment
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${
+                        assignment.status === "completed" || assignment.status === "reviewed"
+                          ? 'bg-green-500 border-green-200 text-white' 
+                          : assignment.status === "in_progress"
+                          ? 'bg-yellow-500 border-yellow-200 text-white'
+                          : 'bg-background border-muted text-muted-foreground'
+                      }`}>
+                        <Trophy className="h-5 w-5" />
+                      </div>
+                    ) : (
+                      // Checkpoint - middle assignments
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center border-4 ${
+                        assignment.status === "completed" || assignment.status === "reviewed"
+                          ? 'bg-green-500 border-green-200 text-white' 
+                          : assignment.status === "in_progress"
+                          ? 'bg-yellow-500 border-yellow-200 text-white'
+                          : 'bg-background border-muted text-muted-foreground'
+                      }`}>
+                        {assignment.status === "completed" || assignment.status === "reviewed" ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Circle className="h-4 w-4" />
+                        )}
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Status indicator for current/active */}
+                  {(assignment.status === "completed" || assignment.status === "in_progress") && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
+                  )}
+                  
+                  {/* Step label */}
+                  <div className="mt-2 text-xs text-muted-foreground whitespace-nowrap">
+                    {index === 0 ? (
+                      "Start"
+                    ) : index === assignments.length - 1 ? (
+                      "Finish"
+                    ) : (
+                      `Step ${index}`
+                    )}
+                  </div>
+                  
+                  {/* Arrow pointing to next assignment */}
+                  {index < assignments.length - 1 && (
+                    <div className="mt-4 text-muted-foreground">
+                      <MoveDown className="h-6 w-6" />
+                    </div>
+                  )}
                 </div>
-              </CardHeader>
+                
+                {/* Assignment Card */}
+                <div className="ml-20 flex-1">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{assignment.title}</h4>
+                            {getStatusBadge(assignment.status)}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>Created: {formatDate(assignment.createdAt)}</span>
+                            {assignment.dueDate && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Due: {formatDate(assignment.dueDate)}
+                              </span>
+                            )}
+                            {assignment.dueDate && getDueDateStatus(assignment.dueDate)}
+                          </div>
+                        </div>
+                        
+                        {/* Grade Display */}
+                        {assignment.grade !== undefined && assignment.grade !== null && (
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 text-yellow-500" />
+                              <span className="text-lg font-bold text-yellow-600">{assignment.grade}/100</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {assignment.grade >= 90 ? "Excellent" :
+                               assignment.grade >= 80 ? "Good" :
+                               assignment.grade >= 70 ? "Satisfactory" :
+                               assignment.grade >= 60 ? "Needs Improvement" : "Poor"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
               <CardContent className="space-y-4">
                 {/* Description */}
                 <div>
@@ -398,13 +600,22 @@ const getDueDateStatus = (dueDate?: number) => {
                     {isCurrentUserMentor ? (
                       <>
                         {assignment.status === "completed" && (
-                          <Button
-                            variant="default"
+                          <Button 
                             size="sm"
-                            onClick={() => setScoringAssignmentId(assignment._id)}
+                            onClick={() => handleStatusUpdate(assignment._id, "reviewed")}
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
-                            Score Assignment
+                            Mark Reviewed
+                          </Button>
+                        )}
+                        {assignment.status === "reviewed" && !assignment.grade && (
+                          <Button 
+                            size="sm"
+                            onClick={() => setScoringAssignmentId(assignment._id)}
+                            className="bg-yellow-500 hover:bg-yellow-600"
+                          >
+                            <Star className="h-4 w-4 mr-1" />
+                            Grade Assignment
                           </Button>
                         )}
                       </>
@@ -428,10 +639,6 @@ const getDueDateStatus = (dueDate?: number) => {
                             Submit for Review
                           </Button>
                         )}
-                        <Button variant="outline" size="sm">
-                          <Upload className="h-4 w-4 mr-1" />
-                          Upload Files
-                        </Button>
                       </>
                     )}
                   </div>
@@ -443,7 +650,10 @@ const getDueDateStatus = (dueDate?: number) => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

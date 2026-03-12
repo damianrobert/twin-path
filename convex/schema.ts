@@ -122,6 +122,8 @@ export default defineSchema({
     createdAt: v.number(),
     completedAt: v.optional(v.number()),
     dueDate: v.optional(v.number()),
+    grade: v.optional(v.number()), // Grade/score out of 100
+    feedback: v.optional(v.string()), // Mentor feedback
   }).index("by_mentorship", ["mentorshipId"]),
 
   // Reviews

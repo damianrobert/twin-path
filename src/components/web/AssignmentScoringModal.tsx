@@ -37,6 +37,7 @@ const AssignmentScoringModal: React.FC<AssignmentScoringModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateStatus = useMutation(api.assignments.updateAssignmentStatus);
+  const updateGrade = useMutation(api.assignments.updateAssignmentGrade);
 
   const getScoreColor = (value: number) => {
     if (value >= 90) return "text-green-600";
@@ -74,17 +75,24 @@ const AssignmentScoringModal: React.FC<AssignmentScoringModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Update assignment status to "reviewed"
+      // First update assignment status to reviewed, then add grade and feedback
       await updateStatus({
         assignmentId,
         status: "reviewed",
       });
 
-      toast.success(`Assignment reviewed with score: ${score[0]}/100`);
+      // Then update assignment grade and feedback
+      await updateGrade({
+        assignmentId,
+        grade: score[0],
+        feedback: feedback.trim(),
+      });
+
+      toast.success(`Assignment graded with score: ${score[0]}/100`);
       handleClose();
     } catch (error) {
-      console.error("Error reviewing assignment:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to review assignment");
+      console.error("Error grading assignment:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to grade assignment");
     } finally {
       setIsSubmitting(false);
     }
@@ -107,7 +115,7 @@ const AssignmentScoringModal: React.FC<AssignmentScoringModalProps> = ({
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Star className="h-5 w-5" />
-            Review & Score Assignment
+            Grade Assignment
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={handleClose}>
             <X className="h-4 w-4" />

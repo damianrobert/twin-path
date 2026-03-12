@@ -122,7 +122,7 @@ export const getAssignmentsForMentorship = query({
     const assignments = await ctx.db
       .query("assignments")
       .filter((q) => q.eq(q.field("mentorshipId"), args.mentorshipId))
-      .order("desc")
+      .order("asc")
       .collect();
 
     return assignments;
@@ -266,6 +266,63 @@ export const uploadAssignmentFiles = mutation({
     
     await ctx.db.patch(args.assignmentId, {
       [fieldName]: [...currentFiles, ...args.files],
+    });
+
+    return args.assignmentId;
+  },
+});
+
+// Update assignment grade and feedback
+export const updateAssignmentGrade = mutation({
+  args: {
+    assignmentId: v.id("assignments"),
+    grade: v.number(),
+    feedback: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+
+    if (!user) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const userProfile = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", user.email))
+      .first();
+
+    if (!userProfile) {
+      throw new ConvexError("User profile not found");
+    }
+
+    // Get the assignment
+    const assignment = await ctx.db.get(args.assignmentId);
+    
+    if (!assignment) {
+      throw new ConvexError("Assignment not found");
+    }
+
+    // Get the mentorship
+    const mentorship = await ctx.db.get(assignment.mentorshipId);
+    
+    if (!mentorship) {
+      throw new ConvexError("Mentorship not found");
+    }
+
+    // Check if user is the mentor
+    if (mentorship.mentorId !== userProfile._id) {
+      throw new ConvexError("Only mentors can grade assignments");
+    }
+
+    // Check if assignment is reviewed (can only grade reviewed assignments)
+    if (assignment.status !== "reviewed") {
+      throw new ConvexError("Can only grade reviewed assignments");
+    }
+
+    // Update assignment with grade and feedback
+    await ctx.db.patch(args.assignmentId, {
+      grade: args.grade,
+      feedback: args.feedback,
     });
 
     return args.assignmentId;
