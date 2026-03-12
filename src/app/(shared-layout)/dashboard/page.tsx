@@ -7,7 +7,7 @@ import { api } from "../../../../convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bell } from "lucide-react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -17,6 +17,7 @@ const DashboardPage = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
   const userMentorships = useQuery(api.mentorships.getUserMentorships);
+  const unseenMessageCount = useQuery(api.messages.getUnseenMessageCount) || { mentorshipUnseen: 0, dmUnseen: 0 };
 
   // Redirect to login if user is not authenticated
   useEffect(() => {
@@ -76,7 +77,7 @@ const DashboardPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>My Profile</CardTitle>
+            <CardTitle>👤 My Profile</CardTitle>
             <CardDescription>
               Manage your profile information
             </CardDescription>
@@ -92,7 +93,7 @@ const DashboardPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>My Mentorships</CardTitle>
+            <CardTitle>🤝 My Mentorships</CardTitle>
             <CardDescription>
               {userMentorships && userMentorships.length > 0 
                 ? `You have ${userMentorships.filter(m => m.status === "active").length} active mentorship(s)`
@@ -112,7 +113,7 @@ const DashboardPage = () => {
         {(currentProfile.role === "mentee" || currentProfile.role === "both") && (
           <Card>
             <CardHeader>
-              <CardTitle>Find Mentors</CardTitle>
+              <CardTitle>🔍 Find Mentors</CardTitle>
               <CardDescription>
                 Discover mentors in your areas of interest
               </CardDescription>
@@ -125,23 +126,50 @@ const DashboardPage = () => {
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Messages</CardTitle>
-            <CardDescription>
-              Your conversations with mentors and mentees
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full" disabled>
-              Coming Soon
-            </Button>
-          </CardContent>
+        <Card className="relative">
+          {(() => {
+            const totalUnseen = (unseenMessageCount?.mentorshipUnseen || 0) + (unseenMessageCount?.dmUnseen || 0);
+            return (
+              <>
+                {totalUnseen > 0 && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                      <Bell className="h-3 w-3" />
+                      {totalUnseen}
+                    </div>
+                  </div>
+                )}
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    💬 Messages
+                    {totalUnseen > 0 && (
+                      <span className="text-blue-500 text-sm font-medium">
+                        New
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {totalUnseen > 0 
+                      ? `You have ${totalUnseen} unread message${totalUnseen === 1 ? '' : 's'}`
+                      : "Your conversations with mentors and mentees"
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/chat">
+                    <Button variant="outline" className="w-full">
+                      {totalUnseen > 0 ? "Read Messages" : "View Messages"}
+                    </Button>
+                  </Link>
+                </CardContent>
+              </>
+            );
+          })()}
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Topics</CardTitle>
+            <CardTitle>📚 Topics</CardTitle>
             <CardDescription>
               Manage your expertise and learning interests
             </CardDescription>
@@ -157,7 +185,7 @@ const DashboardPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Settings</CardTitle>
+            <CardTitle>⚙️ Settings</CardTitle>
             <CardDescription>
               Account and platform settings
             </CardDescription>

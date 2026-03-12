@@ -73,6 +73,7 @@ export default defineSchema({
     senderId: v.id("users"),
     content: v.string(),
     createdAt: v.number(),
+    seenBy: v.optional(v.array(v.id("users"))), // Track which users have seen this message
   }).index("by_mentorship", ["mentorshipId"]),
 
   // Goals
@@ -132,4 +133,30 @@ export default defineSchema({
     comment: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_mentorship", ["mentorshipId"]).index("by_reviewee", ["revieweeId"]),
+
+  // DM Requests (for users without active mentorship)
+  dmRequests: defineTable({
+    senderId: v.id("users"),
+    recipientId: v.id("users"),
+    message: v.string(),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("rejected")),
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+  }).index("by_sender", ["senderId"]).index("by_recipient", ["recipientId"]),
+
+  // Chat Sessions (for DM chats)
+  chatSessions: defineTable({
+    participant1Id: v.id("users"),
+    participant2Id: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_participant1", ["participant1Id"]).index("by_participant2", ["participant2Id"]),
+
+  // DM Messages (for DM chats)
+  dmMessages: defineTable({
+    chatSessionId: v.id("chatSessions"),
+    senderId: v.id("users"),
+    content: v.string(),
+    createdAt: v.number(),
+    seenBy: v.optional(v.array(v.id("users"))), // Track which users have seen this message
+  }).index("by_chatSession", ["chatSessionId"]),
 });

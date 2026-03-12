@@ -20,13 +20,16 @@ import {
   Github,
   Linkedin,
   Globe,
-  Heart
+  Heart,
+  MessageCircle,
+  Bell
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import AssignmentsList from "@/components/web/AssignmentsList";
 import MentorshipClosureModal from "@/components/web/MentorshipClosureModal";
 import MentorshipCompletionModal from "@/components/web/MentorshipCompletionModal";
+import MentorshipChatModal from "@/components/web/MentorshipChatModal";
 
 interface MentorshipWithDetails {
   _id: string;
@@ -87,6 +90,7 @@ const MentorshipPage: React.FC = () => {
   const mentorshipId = params.mentorshipId as string;
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
 
   // Get current user profile
   const currentProfile = useQuery(api.users.getCurrentProfile);
@@ -95,6 +99,12 @@ const MentorshipPage: React.FC = () => {
   const mentorship = useQuery(api.mentorships.getMentorshipById, {
     mentorshipId: mentorshipId as any,
   });
+
+  // Get unseen message count for this mentorship
+  const unseenCount = useQuery(
+    api.messages.getUnseenCountForSession,
+    { mentorshipId: mentorshipId as any }
+  ) || 0;
 
   if (isLoading || !currentProfile) {
     return (
@@ -206,6 +216,22 @@ const MentorshipPage: React.FC = () => {
                   }>
                     {mentorship.status}
                   </Badge>
+                  {mentorship.status === "active" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsChatModalOpen(true)}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      Chat
+                      {unseenCount > 0 && (
+                        <div className="ml-2 bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                          <Bell className="h-3 w-3" />
+                          {unseenCount}
+                        </div>
+                      )}
+                    </Button>
+                  )}
                   {mentorship.status === "active" && isCurrentUserMentor && (
                     <div className="flex items-center gap-2">
                       <Button
@@ -500,6 +526,29 @@ const MentorshipPage: React.FC = () => {
           topic={mentorship.topic.name}
           isOpen={isCompletionModalOpen}
           onClose={() => setIsCompletionModalOpen(false)}
+        />
+      )}
+
+      {/* Chat Modal */}
+      {mentorship.status === "active" && currentProfile && (
+        <MentorshipChatModal
+          mentorshipId={mentorshipId as any}
+          currentUserId={currentProfile._id}
+          otherParticipant={
+            isCurrentUserMentor 
+              ? {
+                  _id: mentorship.mentee!._id,
+                  name: mentorship.mentee!.name,
+                  role: mentorship.mentee!.role
+                }
+              : {
+                  _id: mentorship.mentor!._id,
+                  name: mentorship.mentor!.name,
+                  role: mentorship.mentor!.role
+                }
+          }
+          isOpen={isChatModalOpen}
+          onClose={() => setIsChatModalOpen(false)}
         />
       )}
     </div>

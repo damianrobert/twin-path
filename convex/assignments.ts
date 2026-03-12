@@ -312,6 +312,53 @@ export const getAssignmentById = query({
       return null;
     }
 
-    return assignment;
+    // Get mentor and mentee profiles
+    const mentor = await ctx.db.get(mentorship.mentorId);
+    const mentee = await ctx.db.get(mentorship.menteeId);
+    const topic = await ctx.db.get(mentorship.topicId);
+
+    if (!mentor || !mentee || !topic) {
+      return null;
+    }
+
+    // Return assignment with populated mentorship data
+    return {
+      ...assignment,
+      mentorship: {
+        mentor: {
+          _id: mentor._id,
+          name: mentor.name,
+          email: mentor.email,
+          bio: mentor.bio,
+          role: mentor.role,
+          professionalExperience: mentor.professionalExperience,
+          portfolioUrl: mentor.portfolioUrl,
+          githubUrl: mentor.githubUrl,
+          linkedinUrl: mentor.linkedinUrl,
+          yearsOfExperience: mentor.yearsOfExperience,
+          teachingExperience: mentor.teachingExperience,
+          availability: mentor.availability,
+        },
+        mentee: {
+          _id: mentee._id,
+          name: mentee.name,
+          email: mentee.email,
+          bio: mentee.bio,
+          role: mentee.role,
+          professionalExperience: mentee.professionalExperience,
+          portfolioUrl: mentee.portfolioUrl,
+          githubUrl: mentee.githubUrl,
+          linkedinUrl: mentee.linkedinUrl,
+          yearsOfExperience: mentee.yearsOfExperience,
+          teachingExperience: mentee.teachingExperience,
+          availability: mentee.availability,
+        },
+        topic: {
+          _id: topic._id,
+          name: topic.name,
+          description: topic.description,
+        },
+      },
+    };
   },
 });

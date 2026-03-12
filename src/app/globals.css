@@ -123,3 +123,37 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none !important;  /* Internet Explorer 10+ */
+  scrollbar-width: none !important;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;  /* Safari and Chrome */
+  width: 0px !important;
+  background: transparent !important;
+}
+.scrollbar-hide::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+.scrollbar-hide::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+.scrollbar-hide::-webkit-scrollbar-button {
+  display: none !important;
+}
+.scrollbar-hide::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Also try alternative approach */
+.scrollbar-hide * {
+  scrollbar-width: none !important;
+}
+.scrollbar-hide *::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+}

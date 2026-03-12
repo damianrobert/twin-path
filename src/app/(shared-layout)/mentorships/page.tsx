@@ -44,7 +44,7 @@ interface MentorshipWithDetails {
     email: string;
     bio?: string;
     role: "mentor" | "mentee" | "both";
-  };
+  } | null;
   mentor?: {
     _id: string;
     name: string;
@@ -53,12 +53,12 @@ interface MentorshipWithDetails {
     role: "mentor" | "mentee" | "both";
     professionalExperience?: string;
     yearsOfExperience?: number;
-  };
+  } | null;
   topic?: {
     _id: string;
     name: string;
     description?: string;
-  };
+  } | null;
 }
 
 const MentorshipsPage: React.FC = () => {
