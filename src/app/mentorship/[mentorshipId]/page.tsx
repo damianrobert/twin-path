@@ -18,12 +18,14 @@ import {
   Mail,
   Github,
   Linkedin,
-  Globe
+  Globe,
+  Heart
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import AssignmentsList from "@/components/web/AssignmentsList";
 import MentorshipClosureModal from "@/components/web/MentorshipClosureModal";
+import MentorshipCompletionModal from "@/components/web/MentorshipCompletionModal";
 
 interface MentorshipWithDetails {
   _id: string;
@@ -83,6 +85,7 @@ const MentorshipPage: React.FC = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const mentorshipId = params.mentorshipId as string;
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
 
   // Get current user profile
   const currentProfile = useQuery(api.users.getCurrentProfile);
@@ -203,13 +206,25 @@ const MentorshipPage: React.FC = () => {
                     {mentorship.status}
                   </Badge>
                   {mentorship.status === "active" && isCurrentUserMentor && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setIsClosureModalOpen(true)}
-                    >
-                      Conclude Path
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => setIsCompletionModalOpen(true)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Award className="h-4 w-4 mr-1" />
+                        Complete Path
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setIsClosureModalOpen(true)}
+                      >
+                        <Heart className="h-4 w-4 mr-1" />
+                        Conclude Path
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -459,6 +474,17 @@ const MentorshipPage: React.FC = () => {
           topic={mentorship.topic.name}
           isOpen={isClosureModalOpen}
           onClose={() => setIsClosureModalOpen(false)}
+        />
+      )}
+
+      {/* Mentorship Completion Modal */}
+      {mentorship && mentorship.mentee && mentorship.topic && (
+        <MentorshipCompletionModal
+          mentorshipId={mentorshipId as any}
+          menteeName={mentorship.mentee.name}
+          topic={mentorship.topic.name}
+          isOpen={isCompletionModalOpen}
+          onClose={() => setIsCompletionModalOpen(false)}
         />
       )}
     </div>

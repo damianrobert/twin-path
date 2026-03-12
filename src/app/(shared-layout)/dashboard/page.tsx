@@ -102,7 +102,7 @@ const DashboardPage = () => {
           </CardHeader>
           <CardContent>
             {userMentorships && userMentorships.some(m => m.status === "active") ? (
-              <Link href="/mentorship-requests">
+              <Link href="/mentorships">
                 <Button variant="outline" className="w-full">
                   View All Mentorships
                 </Button>
