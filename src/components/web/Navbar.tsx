@@ -11,6 +11,7 @@ import { useTransition } from "react";
 import { Loader2, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Logo from "./Logo";
+import GlobalAvatar from "./GlobalAvatar";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
@@ -67,6 +68,7 @@ const Navbar = () => {
       <div className="flex items-center mx-1">
         {isLoading ? null : isAuthenticated ? (
           <>
+            <GlobalAvatar className="mr-3" />
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button className="mx-1">Logout</Button>

@@ -22,6 +22,7 @@ import {
   X
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import GlobalAvatar from "@/components/web/GlobalAvatar";
 
 // Helper functions for avatar
 const generateColorFromString = (str: string) => {
@@ -342,9 +343,14 @@ const MentorsPage = () => {
           <Card key={mentor._id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-start space-x-4">
-                <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white font-medium ${generateColorFromString(mentor.name)}`}>
-                  {getInitials(mentor.name)}
-                </div>
+                <GlobalAvatar 
+                  user={{
+                    name: mentor.name,
+                    role: mentor.role
+                  }}
+                  size="lg"
+                  clickable={false}
+                />
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg">{mentor.name}</CardTitle>
                   <div className="flex items-center gap-2 mt-1">

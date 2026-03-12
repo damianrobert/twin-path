@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
+import GlobalAvatar from "@/components/web/GlobalAvatar";
 import { api } from "../../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -171,9 +172,16 @@ const MentorshipsPage: React.FC = () => {
         <CardContent className="space-y-4">
           {/* Other Person Info */}
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
-            </div>
+            {otherPerson && (
+              <GlobalAvatar 
+                user={{
+                  name: otherPerson.name,
+                  role: otherPerson.role
+                }}
+                size="sm"
+                clickable={false}
+              />
+            )}
             <div className="flex-1">
               <p className="font-medium">{otherPerson?.name || "Unknown"}</p>
               <p className="text-sm text-muted-foreground">

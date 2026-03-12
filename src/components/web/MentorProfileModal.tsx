@@ -23,6 +23,7 @@ import {
 import MentorshipRequestModal from "./MentorshipRequestModal";
 import { useConvexAuth } from "convex/react";
 import { useQuery } from "convex/react";
+import GlobalAvatar from "./GlobalAvatar";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 
@@ -79,9 +80,14 @@ const MentorProfileModal: React.FC<MentorProfileModalProps> = ({ mentor, isOpen,
         {/* Header */}
         <div className="sticky top-0 bg-background dark:bg-gray-900 border-b border-border p-6 flex justify-between items-start">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-              {mentor.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-            </div>
+            <GlobalAvatar 
+              user={{
+                name: mentor.name,
+                role: mentor.role
+              }}
+              size="lg"
+              clickable={false}
+            />
             <div>
               <h2 className="text-2xl font-bold text-foreground">{mentor.name}</h2>
               <div className="flex items-center gap-2 mt-1">

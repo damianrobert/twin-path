@@ -101,17 +101,11 @@ const DashboardPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {userMentorships && userMentorships.some(m => m.status === "active") ? (
-              <Link href="/mentorships">
-                <Button variant="outline" className="w-full">
-                  View All Mentorships
-                </Button>
-              </Link>
-            ) : (
-              <Button variant="outline" className="w-full" disabled>
-                No Active Mentorships
+            <Link href="/mentorships">
+              <Button variant="outline" className="w-full">
+                View All Mentorships
               </Button>
-            )}
+            </Link>
           </CardContent>
         </Card>
 

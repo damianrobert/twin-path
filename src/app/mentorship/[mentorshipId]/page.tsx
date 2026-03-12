@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
+import GlobalAvatar from "@/components/web/GlobalAvatar";
 import { api } from "../../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -261,9 +262,16 @@ const MentorshipPage: React.FC = () => {
             <div className="space-y-4">
               {/* Profile Info */}
               <div className="flex items-center space-x-4">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-r from-green-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold">
-                  {mentorship.mentee?.name.split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2)}
-                </div>
+                {mentorship.mentee && (
+                  <GlobalAvatar 
+                    user={{
+                      name: mentorship.mentee.name,
+                      role: mentorship.mentee.role
+                    }}
+                    size="lg"
+                    clickable={false}
+                  />
+                )}
                 <div>
                   <h3 className="text-lg font-semibold">{mentorship.mentee?.name}</h3>
                   <p className="text-sm text-muted-foreground">{mentorship.mentee?.email}</p>
@@ -350,9 +358,16 @@ const MentorshipPage: React.FC = () => {
             <div className="space-y-4">
               {/* Profile Info */}
               <div className="flex items-center space-x-4">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-                  {mentorship.mentor?.name.split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2)}
-                </div>
+                {mentorship.mentor && (
+                  <GlobalAvatar 
+                    user={{
+                      name: mentorship.mentor.name,
+                      role: mentorship.mentor.role
+                    }}
+                    size="lg"
+                    clickable={false}
+                  />
+                )}
                 <div>
                   <h3 className="text-lg font-semibold">{mentorship.mentor?.name}</h3>
                   <p className="text-sm text-muted-foreground">{mentorship.mentor?.email}</p>
