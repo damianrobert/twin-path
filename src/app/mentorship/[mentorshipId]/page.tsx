@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import AssignmentsList from "@/components/web/AssignmentsList";
+import MentorshipClosureModal from "@/components/web/MentorshipClosureModal";
 
 interface MentorshipWithDetails {
   _id: string;
@@ -29,9 +31,13 @@ interface MentorshipWithDetails {
   menteeId: string;
   mentorId: string;
   topicId: string;
-  status: "active" | "completed";
+  status: "active" | "completed" | "closed";
   createdAt: number;
   completedAt?: number;
+  closedAt?: number;
+  closedBy?: string;
+  closureReason?: string;
+  finalFeedback?: string;
   mentee?: {
     _id: string;
     name: string;
@@ -76,6 +82,7 @@ const MentorshipPage: React.FC = () => {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const mentorshipId = params.mentorshipId as string;
+  const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
 
   // Get current user profile
   const currentProfile = useQuery(api.users.getCurrentProfile);
@@ -188,9 +195,23 @@ const MentorshipPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status:</p>
-                <Badge variant={mentorship.status === "active" ? "default" : "outline"}>
-                  {mentorship.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={
+                    mentorship.status === "active" ? "default" : 
+                    mentorship.status === "closed" ? "destructive" : "outline"
+                  }>
+                    {mentorship.status}
+                  </Badge>
+                  {mentorship.status === "active" && isCurrentUserMentor && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setIsClosureModalOpen(true)}
+                    >
+                      Conclude Path
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -420,6 +441,26 @@ const MentorshipPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Assignments Section */}
+      <div className="mt-8">
+        <AssignmentsList 
+          mentorshipId={mentorshipId as any} 
+          isCurrentUserMentor={isCurrentUserMentor}
+          mentorshipStatus={mentorship?.status}
+        />
+      </div>
+
+      {/* Mentorship Closure Modal */}
+      {mentorship && mentorship.mentee && mentorship.topic && (
+        <MentorshipClosureModal
+          mentorshipId={mentorshipId as any}
+          menteeName={mentorship.mentee.name}
+          topic={mentorship.topic.name}
+          isOpen={isClosureModalOpen}
+          onClose={() => setIsClosureModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

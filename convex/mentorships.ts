@@ -155,3 +155,60 @@ export const completeMentorship = mutation({
     return args.mentorshipId;
   },
 });
+
+// Close a mentorship (mentor only)
+export const closeMentorship = mutation({
+  args: {
+    mentorshipId: v.id("mentorships"),
+    closureReason: v.string(),
+    finalFeedback: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+
+    if (!user) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const userProfile = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", user.email))
+      .first();
+
+    if (!userProfile) {
+      throw new ConvexError("User profile not found");
+    }
+
+    // Get the mentorship
+    const mentorship = await ctx.db.get(args.mentorshipId);
+    
+    if (!mentorship) {
+      throw new ConvexError("Mentorship not found");
+    }
+
+    // Check if user is the mentor
+    if (mentorship.mentorId !== userProfile._id) {
+      throw new ConvexError("Only mentors can close mentorships");
+    }
+
+    // Check if mentorship is already closed or completed
+    if (mentorship.status === "closed") {
+      throw new ConvexError("Mentorship is already closed");
+    }
+
+    if (mentorship.status === "completed") {
+      throw new ConvexError("Cannot close a completed mentorship");
+    }
+
+    // Update mentorship status
+    await ctx.db.patch(args.mentorshipId, {
+      status: "closed",
+      closedAt: Date.now(),
+      closedBy: userProfile._id,
+      closureReason: args.closureReason,
+      finalFeedback: args.finalFeedback,
+    });
+
+    return args.mentorshipId;
+  },
+});

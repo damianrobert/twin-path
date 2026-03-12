@@ -58,9 +58,13 @@ export default defineSchema({
     menteeId: v.id("users"),
     mentorId: v.id("users"),
     topicId: v.id("topics"),
-    status: v.union(v.literal("active"), v.literal("completed")),
+    status: v.union(v.literal("active"), v.literal("completed"), v.literal("closed")),
     createdAt: v.number(),
     completedAt: v.optional(v.number()),
+    closedAt: v.optional(v.number()),
+    closedBy: v.optional(v.id("users")), // Who initiated the closure
+    closureReason: v.optional(v.string()), // Reason for closure
+    finalFeedback: v.optional(v.string()), // Final feedback from mentor
   }).index("by_mentee", ["menteeId"]).index("by_mentor", ["mentorId"]),
 
   // Messages
@@ -89,6 +93,35 @@ export default defineSchema({
     createdAt: v.number(),
     completedAt: v.optional(v.number()),
   }).index("by_goal", ["goalId"]),
+
+  // Assignments
+  assignments: defineTable({
+    mentorshipId: v.id("mentorships"),
+    title: v.string(),
+    description: v.string(),
+    mentorFiles: v.array(v.union(
+      v.string(), // Legacy format (URL only)
+      v.object({
+        url: v.string(),
+        name: v.string(),
+        size: v.number(),
+        type: v.string(),
+      })
+    )),
+    menteeFiles: v.array(v.union(
+      v.string(), // Legacy format (URL only)
+      v.object({
+        url: v.string(),
+        name: v.string(),
+        size: v.number(),
+        type: v.string(),
+      })
+    )),
+    status: v.union(v.literal("pending"), v.literal("in_progress"), v.literal("completed"), v.literal("reviewed")),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+    dueDate: v.optional(v.number()),
+  }).index("by_mentorship", ["mentorshipId"]),
 
   // Reviews
   reviews: defineTable({
