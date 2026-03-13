@@ -77,6 +77,15 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
     seenBy: v.optional(v.array(v.id("users"))), // Track which users have seen this message
+    attachments: v.optional(v.array(v.union(
+      v.string(), // Legacy format (URL only)
+      v.object({
+        url: v.string(),
+        name: v.string(),
+        size: v.number(),
+        type: v.string(),
+      })
+    ))), // File attachments
   }).index("by_mentorship", ["mentorshipId"]),
 
   // Goals
@@ -163,5 +172,14 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
     seenBy: v.optional(v.array(v.id("users"))), // Track which users have seen this message
+    attachments: v.optional(v.array(v.union(
+      v.string(), // Legacy format (URL only)
+      v.object({
+        url: v.string(),
+        name: v.string(),
+        size: v.number(),
+        type: v.string(),
+      })
+    ))), // File attachments
   }).index("by_chatSession", ["chatSessionId"]),
 });

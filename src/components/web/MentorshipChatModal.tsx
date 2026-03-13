@@ -6,9 +6,12 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, Check, CheckCheck, X } from "lucide-react";
+import { Send, MessageCircle, Check, CheckCheck, X, Paperclip } from "lucide-react";
 import GlobalAvatar from "./GlobalAvatar";
 import { PresenceIndicator } from "./PresenceIndicator";
+import { useChatFileUpload, getFileIcon, formatFileSize } from "@/hooks/useChatFileUpload";
+import { toast } from "sonner";
+import { FileAttachments } from "./FileAttachments";
 
 interface MentorshipChatModalProps {
   mentorshipId: Id<"mentorships">;
@@ -30,6 +33,10 @@ export default function MentorshipChatModal({
   onClose 
 }: MentorshipChatModalProps) {
   const [messageInput, setMessageInput] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  
+  // Initialize file upload hook
+  const { uploadFiles, uploadingFiles, uploadProgress, isUploading } = useChatFileUpload();
   
   // Get messages for this mentorship
   const messages = useQuery(api.messages.getMessages, { mentorshipId }) || [];
@@ -53,17 +60,51 @@ export default function MentorshipChatModal({
   }, [isOpen, mentorshipId, markMessagesAsSeen]);
 
   const handleSendMessage = async () => {
-    if (!messageInput.trim()) return;
+    if ((!messageInput.trim() && attachedFiles.length === 0)) return;
     
     try {
-      await sendMessage({
-        mentorshipId,
-        content: messageInput.trim(),
-      });
-      setMessageInput("");
+      // Upload files first if there are any
+      let uploadedAttachments: any[] = [];
+      if (attachedFiles.length > 0) {
+        uploadedAttachments = await uploadFiles(attachedFiles);
+        
+        // If no files were successfully uploaded and no text message, don't send empty message
+        if (uploadedAttachments.length === 0 && !messageInput.trim()) {
+          toast.error("No valid files to send");
+          setAttachedFiles([]); // Clear invalid files
+          return;
+        }
+        
+        // If some files failed to upload
+        if (uploadedAttachments.length !== attachedFiles.length) {
+          toast.error("Some files failed to upload");
+        }
+      }
+
+      // Only send message if there's content or valid attachments
+      if (messageInput.trim() || uploadedAttachments.length > 0) {
+        await sendMessage({
+          mentorshipId,
+          content: messageInput.trim(),
+          attachments: uploadedAttachments,
+        });
+        setMessageInput("");
+        setAttachedFiles([]);
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
     }
+  };
+
+  // File handling functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setAttachedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const formatDate = (timestamp: number) => {
@@ -171,7 +212,18 @@ export default function MentorshipChatModal({
                         : "bg-primary text-primary-foreground"
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    {/* Message Content */}
+                    {message.content && (
+                      <p className="text-sm">{message.content}</p>
+                    )}
+                    
+                    {/* File Attachments */}
+                    <FileAttachments 
+                      attachments={message.attachments || []}
+                      isOwnMessage={message.sender._id !== otherParticipant._id}
+                    />
+                    
+                    {/* Message Footer */}
                     <div className={`flex items-center justify-between mt-1 ${
                       message.sender._id === otherParticipant._id
                         ? "text-muted-foreground"
@@ -199,7 +251,44 @@ export default function MentorshipChatModal({
 
         {/* Input */}
         <div className="p-4 border-t">
+          {/* Attached Files Preview */}
+          {attachedFiles.length > 0 && (
+            <div className="mb-3 space-y-2">
+              <div className="text-sm font-medium text-muted-foreground">Attached Files:</div>
+              <div className="flex flex-wrap gap-2">
+                {attachedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center gap-2 bg-muted p-2 rounded-md">
+                    <span className="text-sm">{getFileIcon(file.type)}</span>
+                    <span className="text-sm truncate max-w-[150px]">{file.name}</span>
+                    <span className="text-xs text-muted-foreground">({formatFileSize(file.size)})</span>
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-red-500 hover:text-red-700"
+                      disabled={isUploading(file.name)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
+            {/* File Upload Button */}
+            <div className="relative">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={Object.keys(uploadingFiles).length > 0}
+              />
+              <Button variant="ghost" size="sm" disabled={Object.keys(uploadingFiles).length > 0}>
+                <Paperclip className="h-4 w-4" />
+              </Button>
+            </div>
+
             <Input
               placeholder="Type a message..."
               value={messageInput}
@@ -211,11 +300,22 @@ export default function MentorshipChatModal({
                 }
               }}
               className="flex-1"
+              disabled={Object.keys(uploadingFiles).length > 0}
             />
-            <Button onClick={handleSendMessage} disabled={!messageInput.trim()}>
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={(!messageInput.trim() && attachedFiles.length === 0) || Object.keys(uploadingFiles).length > 0}
+            >
               <Send className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Upload Progress */}
+          {Object.keys(uploadingFiles).length > 0 && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              Uploading files... {Object.keys(uploadingFiles).length} file(s)
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -3,11 +3,71 @@ import { mutation, query } from "./_generated/server";
 import { ConvexError } from "convex/values";
 import { authComponent } from "./auth";
 
+// Generate upload URL for chat file
+export const generateChatUploadUrl = mutation({
+  args: {
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    // Validate file size (10MB limit)
+    if (args.fileSize > 10 * 1024 * 1024) {
+      throw new ConvexError("File size must be less than 10MB");
+    }
+
+    // Generate upload URL
+    const uploadUrl = await ctx.storage.generateUploadUrl();
+    
+    return { uploadUrl };
+  },
+});
+
+// Store uploaded chat file
+export const storeChatFile = mutation({
+  args: {
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.safeGetAuthUser(ctx);
+    if (!user) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    // Get the storage URL
+    const url = await ctx.storage.getUrl(args.storageId);
+    
+    return {
+      url,
+      name: args.fileName,
+      size: args.fileSize,
+      type: args.fileType,
+    };
+  },
+});
+
 // Send a message within an active mentorship
 export const sendMessage = mutation({
   args: {
     mentorshipId: v.id("mentorships"),
     content: v.string(),
+    attachments: v.optional(v.array(v.union(
+      v.string(), // Legacy format (URL only)
+      v.object({
+        url: v.string(),
+        name: v.string(),
+        size: v.number(),
+        type: v.string(),
+      })
+    ))), // File attachments
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -48,6 +108,7 @@ export const sendMessage = mutation({
       content: args.content,
       createdAt: Date.now(),
       seenBy: [userId], // Sender has seen their own message
+      attachments: args.attachments || [], // Include file attachments
     });
 
     return messageId;
@@ -373,6 +434,15 @@ export const sendDMMessage = mutation({
   args: {
     chatSessionId: v.id("chatSessions"),
     content: v.string(),
+    attachments: v.optional(v.array(v.union(
+      v.string(), // Legacy format (URL only)
+      v.object({
+        url: v.string(),
+        name: v.string(),
+        size: v.number(),
+        type: v.string(),
+      })
+    ))), // File attachments
   },
   handler: async (ctx, args) => {
     const user = await authComponent.safeGetAuthUser(ctx);
@@ -415,6 +485,7 @@ export const sendDMMessage = mutation({
       content: args.content,
       createdAt: Date.now(),
       seenBy: [userId], // Sender has seen their own message
+      attachments: args.attachments || [], // Include file attachments
     });
 
     return {
