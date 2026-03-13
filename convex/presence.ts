@@ -78,8 +78,10 @@ export const heartbeat = mutation({
   handler: async (ctx) => {
     const user = await authComponent.safeGetAuthUser(ctx);
 
+    // Gracefully handle unauthenticated users - don't throw errors
     if (!user) {
-      throw new Error("Not authenticated");
+      // User is not authenticated, just return silently
+      return;
     }
 
     const userProfile = await ctx.db
@@ -88,15 +90,14 @@ export const heartbeat = mutation({
       .first();
 
     if (!userProfile) {
-      throw new Error("User profile not found");
+      // User profile not found, just return silently
+      return;
     }
 
     await ctx.db.patch(userProfile._id, {
       isOnline: true,
-      lastSeen: undefined,
+      lastSeen: Date.now(),
     });
-
-    return userProfile._id;
   },
 });
 

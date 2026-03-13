@@ -25,10 +25,35 @@ export default defineSchema({
   // Blog Posts
   posts: defineTable({
     title: v.string(),
-    body: v.string(),
+    slug: v.string(), // URL-friendly slug for SEO
+    excerpt: v.optional(v.string()), // Short description/summary
+    content: v.string(), // Full blog content (rich text)
     authorId: v.id("users"),
+    status: v.union(v.literal("draft"), v.literal("published")), // Draft/Published status
+    featuredImage: v.optional(v.string()), // Featured image URL
+    readingTime: v.optional(v.number()), // Estimated reading time in minutes
+    tags: v.optional(v.array(v.string())), // Additional tags
+    viewCount: v.optional(v.number()), // View counter
+    likeCount: v.optional(v.number()), // Like counter
     createdAt: v.number(),
-  }).index("by_author", ["authorId"]),
+    updatedAt: v.optional(v.number()), // Last updated timestamp
+    publishedAt: v.optional(v.number()), // When it was published
+  }).index("by_author", ["authorId"])
+   .index("by_status", ["status"])
+   .index("by_slug", ["slug"])
+   .index("by_published", ["status", "publishedAt"]), // For listing published posts
+
+  // Blog post - topic associations (many-to-many)
+  postTopics: defineTable({
+    postId: v.id("posts"),
+    topicId: v.id("topics"),
+  }).index("by_post", ["postId"]).index("by_topic", ["topicId"]),
+
+  // Blog post likes
+  postLikes: defineTable({
+    userId: v.id("users"),
+    postId: v.id("posts"),
+  }).index("by_user_post", ["userId", "postId"]).index("by_post", ["postId"]),
 
   // Topics
   topics: defineTable({
