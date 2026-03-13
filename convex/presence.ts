@@ -1,13 +1,14 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
+import { Id } from "./_generated/dataModel";
 
 // Update user online status
 export const updateOnlineStatus = mutation({
   args: {
     isOnline: v.boolean(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Id<"users"> | null> => {
     const user = await authComponent.safeGetAuthUser(ctx);
 
     if (!user) {
@@ -20,7 +21,10 @@ export const updateOnlineStatus = mutation({
       .first();
 
     if (!userProfile) {
-      throw new Error("User profile not found");
+      // User profile doesn't exist yet, this is normal for new users
+      // Don't throw an error, just return null so the presence system can continue
+      console.log("User profile not found for presence update, user may be new");
+      return null;
     }
 
     await ctx.db.patch(userProfile._id, {

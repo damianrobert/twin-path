@@ -46,6 +46,7 @@ export const seedMentorProfile = mutation({
         email: args.email,
         name: args.name,
         role: args.role,
+        isAdmin: false, // Default to non-admin for new users
         bio: args.bio,
         availability: args.availability,
         professionalExperience: args.professionalExperience,
@@ -111,6 +112,7 @@ export const createOrUpdateProfile = mutation({
         email: user.email,
         name: args.name,
         role: args.role,
+        isAdmin: false, // Default to non-admin for new users
         bio: args.bio,
         availability: args.availability,
         professionalExperience: args.professionalExperience,
@@ -308,5 +310,78 @@ export const removeUserTopic = mutation({
 
     await ctx.db.delete(args.userTopicId);
     return args.userTopicId;
+  },
+});
+
+// Get user by ID (for admin use)
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    return user;
+  },
+});
+
+// Update user by admin
+export const updateUserByAdmin = mutation({
+  args: {
+    userId: v.id("users"),
+    updateData: v.object({
+      name: v.string(),
+      email: v.string(),
+      role: v.union(v.literal("mentor"), v.literal("mentee"), v.literal("both")),
+      isAdmin: v.boolean(),
+      bio: v.optional(v.string()),
+      professionalExperience: v.optional(v.string()),
+      portfolioUrl: v.optional(v.string()),
+      githubUrl: v.optional(v.string()),
+      linkedinUrl: v.optional(v.string()),
+      yearsOfExperience: v.optional(v.number()),
+      teachingExperience: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    // Check if current user is admin
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!currentUser || !currentUser.isAdmin) {
+      throw new ConvexError("Unauthorized: Admin access required");
+    }
+
+    // Get the user to update
+    const userToUpdate = await ctx.db.get(args.userId);
+    if (!userToUpdate) {
+      throw new ConvexError("User not found");
+    }
+
+    // Prevent admin from updating themselves
+    if (currentUser._id === userToUpdate._id) {
+      throw new ConvexError("Cannot update your own account from this interface");
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (args.updateData.email !== userToUpdate.email) {
+      const existingUser = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.updateData.email))
+        .first();
+
+      if (existingUser && existingUser._id !== userToUpdate._id) {
+        throw new ConvexError("Email is already in use by another user");
+      }
+    }
+
+    // Update the user
+    await ctx.db.patch(args.userId, args.updateData);
+
+    return { success: true };
   },
 });

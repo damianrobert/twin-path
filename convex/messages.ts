@@ -831,3 +831,12 @@ export const getChatSessions = query({
     return sessionsWithParticipants;
   },
 });
+
+// Get all messages (for analytics)
+export const getAllMessages = query({
+  args: {},
+  handler: async (ctx) => {
+    const messages = await ctx.db.query("messages").collect();
+    return messages;
+  },
+});

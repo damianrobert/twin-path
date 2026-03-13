@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 import { ConvexClientProvider } from "@/components/web/ConvexClientProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { PresenceProvider } from "@/components/web/PresenceProvider";
+import { MaintenanceProvider } from "@/contexts/MaintenanceContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,9 @@ export default function RootLayout({
         >
           <main>
             <ConvexClientProvider>
-              <PresenceProvider>{children}</PresenceProvider>
+              <MaintenanceProvider>
+                <PresenceProvider>{children}</PresenceProvider>
+              </MaintenanceProvider>
             </ConvexClientProvider>
           </main>
           <Toaster closeButton />

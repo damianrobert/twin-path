@@ -7,6 +7,7 @@ export default defineSchema({
     email: v.string(),
     name: v.string(),
     role: v.union(v.literal("mentor"), v.literal("mentee"), v.literal("both")),
+    isAdmin: v.optional(v.boolean()), // Admin rights flag (optional during migration)
     bio: v.optional(v.string()),
     availability: v.optional(v.string()),
     // Mentor-specific fields
@@ -20,7 +21,8 @@ export default defineSchema({
     isOnline: v.optional(v.boolean()), // Make optional for existing users
     lastSeen: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_email", ["email"]),
+  }).index("by_email", ["email"])
+   .index("by_admin", ["isAdmin"]), // For finding admin users,
 
   // Blog Posts
   posts: defineTable({
@@ -207,4 +209,53 @@ export default defineSchema({
       })
     ))), // File attachments
   }).index("by_chatSession", ["chatSessionId"]),
+
+  // Blog Reports
+  blogReports: defineTable({
+    postId: v.id("posts"),
+    reporterId: v.id("users"),
+    reason: v.union(
+      v.literal("inappropriate_content"),
+      v.literal("spam"),
+      v.literal("harassment"),
+      v.literal("copyright"),
+      v.literal("misinformation"),
+      v.literal("offensive_language"),
+      v.literal("other")
+    ),
+    message: v.string(), // Detailed message from the reporter
+    status: v.union(v.literal("pending"), v.literal("reviewed"), v.literal("resolved"), v.literal("dismissed")),
+    reviewedBy: v.optional(v.id("users")), // Admin who reviewed the report
+    reviewNotes: v.optional(v.string()), // Admin notes about the review
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+  }).index("by_post", ["postId"])
+   .index("by_reporter", ["reporterId"])
+   .index("by_status", ["status"])
+   .index("by_post_status", ["postId", "status"]), // For checking if user already reported
+
+  // Platform Settings
+  platformSettings: defineTable({
+    maintenanceMode: v.boolean(),
+    maintenanceMessage: v.string(),
+    siteName: v.string(),
+    siteDescription: v.string(),
+    allowUserRegistration: v.boolean(),
+    requireEmailVerification: v.boolean(),
+    allowPublicProfiles: v.boolean(),
+    enableContentModeration: v.boolean(),
+    autoApprovePosts: v.boolean(),
+    enableMessaging: v.boolean(),
+    maxFileSize: v.number(),
+    allowedFileTypes: v.array(v.string()),
+    defaultUserRole: v.union(v.literal("mentee"), v.literal("mentor"), v.literal("both")),
+    enableNotifications: v.boolean(),
+    notificationEmail: v.string(),
+    enableAnalytics: v.boolean(),
+    dataRetentionDays: v.number(),
+    enableBackup: v.boolean(),
+    backupFrequency: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }),
 });

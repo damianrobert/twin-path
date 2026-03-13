@@ -1,6 +1,24 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 
+// Migration to add admin field to existing users
+export const migrateAdminField = mutation({
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    
+    for (const user of users) {
+      // Only update if the user doesn't have isAdmin field set
+      if (user.isAdmin === undefined) {
+        await ctx.db.patch(user._id, {
+          isAdmin: false, // Default to non-admin for existing users
+        });
+      }
+    }
+
+    return { migrated: users.length };
+  },
+});
+
 // Migration to add presence fields to existing users
 export const migrateUserPresence = mutation({
   handler: async (ctx) => {

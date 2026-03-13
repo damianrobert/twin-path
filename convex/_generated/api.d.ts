@@ -8,13 +8,17 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as assignments from "../assignments.js";
 import type * as auth from "../auth.js";
+import type * as blogReports from "../blogReports.js";
+import type * as emergency from "../emergency.js";
 import type * as http from "../http.js";
 import type * as mentorshipRequests from "../mentorshipRequests.js";
 import type * as mentorships from "../mentorships.js";
 import type * as messages from "../messages.js";
 import type * as migrations from "../migrations.js";
+import type * as platformSettings from "../platformSettings.js";
 import type * as posts from "../posts.js";
 import type * as presence from "../presence.js";
 import type * as runMigration from "../runMigration.js";
@@ -28,13 +32,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   assignments: typeof assignments;
   auth: typeof auth;
+  blogReports: typeof blogReports;
+  emergency: typeof emergency;
   http: typeof http;
   mentorshipRequests: typeof mentorshipRequests;
   mentorships: typeof mentorships;
   messages: typeof messages;
   migrations: typeof migrations;
+  platformSettings: typeof platformSettings;
   posts: typeof posts;
   presence: typeof presence;
   runMigration: typeof runMigration;

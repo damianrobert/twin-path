@@ -19,6 +19,13 @@ import { useRouter } from "next/navigation";
 
 export default function CreateBlogPage() {
   const router = useRouter();
+  
+  const allPosts = useQuery(api.posts.getPublishedPosts, { limit: 1000 });
+  const userProfile = useQuery(api.users.getCurrentProfile);
+  const topics = useQuery(api.topics.getAllTopics) || [];
+  
+  const createPost = useAction(api.posts.createPost);
+  
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -36,19 +43,9 @@ export default function CreateBlogPage() {
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [rejectionIssues, setRejectionIssues] = useState<string[]>([]);
 
-  // Get current user profile to check role
-  const userProfile = useQuery(api.users.getCurrentProfile);
-
   // Check if user is mentor or both
   const canWriteBlog = userProfile?.role === "mentor" || userProfile?.role === "both";
 
-  // Get all topics for selection
-  const topics = useQuery(api.topics.getAllTopics) || [];
-
-  // Actions and Mutations
-  const createPost = useAction(api.posts.createPost);
-
-  // Redirect non-mentors
   useEffect(() => {
     if (userProfile && !canWriteBlog) {
       toast.error("Only mentors can write blog posts");
@@ -56,7 +53,15 @@ export default function CreateBlogPage() {
     }
   }, [userProfile, canWriteBlog, router]);
 
-  // Show loading or unauthorized state
+  useEffect(() => {
+    if (title && !slug) {
+      const timeoutId = setTimeout(() => {
+        generateSlug(title);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [title, slug]);
+
   if (!userProfile) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -92,14 +97,25 @@ export default function CreateBlogPage() {
     setIsGeneratingSlug(true);
     try {
       // Simple slug generation - convert to lowercase, replace spaces with hyphens, remove special chars
-      const slug = title
+      let slug = title
         .toLowerCase()
         .trim()
         .replace(/[^\w\s-]/g, '') // Remove special characters
         .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
         .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
       
-      setSlug(slug);
+      // Check if slug already exists and append number if needed
+      const existingSlugs = allPosts?.map((post: Doc<"posts">) => post.slug) || [];
+      
+      let finalSlug = slug;
+      let counter = 1;
+      
+      while (existingSlugs.includes(finalSlug)) {
+        finalSlug = `${slug}-${counter}`;
+        counter++;
+      }
+      
+      setSlug(finalSlug);
     } catch (error) {
       console.error("Error generating slug:", error);
     } finally {
@@ -147,41 +163,27 @@ export default function CreateBlogPage() {
   };
 
   // Handle featured image upload
-  const handleImageUpload = async (file: File) => {
-    // Only allow one image - replace existing if any
-    setIsUploadingImage(true);
-    try {
-      // Validate file type (images only)
-      if (!file.type.startsWith('image/')) {
-        toast.error("Only image files are allowed");
-        setIsUploadingImage(false);
+  const handleImageUpload = (file: File) => {
+    if (file) {
+      if (file.size > 500 * 1024) { // 500KB limit to stay under Convex's 1MB limit with base64 encoding
+        toast.error("Image size must be less than 500KB");
         return;
       }
-
-      // Validate file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("Image size must be less than 10MB");
-        setIsUploadingImage(false);
-        return;
-      }
-
-      // For now, we'll use a simple approach - convert to base64 or use a placeholder
-      // In a real app, you'd upload to a service like Cloudinary, AWS S3, or Convex storage
+      setIsUploadingImage(true);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const result = reader.result as string;
-        // Replace any existing image - only one featured image allowed
-        setFeaturedImage(result);
+        setFeaturedImage(reader.result as string);
         setFeaturedImageFile(file);
         setIsUploadingImage(false);
-        toast.success("Image uploaded successfully");
       };
       reader.readAsDataURL(file);
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Failed to upload image");
-      setIsUploadingImage(false);
     }
+  };
+
+  // Remove featured image
+  const removeFeaturedImage = () => {
+    setFeaturedImage("");
+    setFeaturedImageFile(null);
   };
 
   // Handle form submission
@@ -228,9 +230,9 @@ export default function CreateBlogPage() {
         }
       } else {
         // Handle content moderation rejection
-        console.log("🔍 Full result object:", result);
+        console.log(" Full result object:", result);
         if (result.error === "Content not approved") {
-          console.log("🔍 Moderation issues:", result.issues);
+          console.log(" Moderation issues:", result.issues);
           setRejectionIssues(result.issues);
           setRejectionModalOpen(true);
         } else {
@@ -245,7 +247,9 @@ export default function CreateBlogPage() {
       
       // Handle other unexpected errors
       if (error instanceof Error && error.message.includes("slug already exists")) {
-        toast.error("This URL slug is already taken. Please choose a different one.");
+        toast.error("This URL slug is already taken. Generating a new one...");
+        // Auto-generate a new slug
+        generateSlug(title + "-" + Date.now());
       } else if (error instanceof Error && error.message.includes("Only mentors can create blog posts")) {
         toast.error("Only mentors can create blog posts");
       } else {
@@ -378,11 +382,11 @@ export default function CreateBlogPage() {
                     />
                     <label htmlFor="image-upload" className="cursor-pointer">
                       <Image className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-sm text-muted-foreground mb-2">
+                      <p className="text-xs text-muted-foreground mb-2">
                         {featuredImage ? "Click to replace featured image" : "Click to upload or drag and drop"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        PNG, JPG, GIF up to 10MB • Only one image allowed
+                        Maximum file size: 500KB (to ensure fast loading)
                       </p>
                       {featuredImage && (
                         <p className="text-xs text-green-600 mt-2">
@@ -641,7 +645,15 @@ export default function CreateBlogPage() {
               <li>• Provide substantial content (at least 10 characters)</li>
               <li>• Use professional language and avoid inappropriate words</li>
               <li>• Make sure tags are relevant to your content</li>
+              <li>• Use appropriate, professional images only</li>
             </ul>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+            <p className="text-xs text-amber-800">
+              <strong>Note:</strong> Content moderation is performed by AI and may occasionally make errors. 
+              If you believe your content was incorrectly flagged, please contact our support team for review.
+            </p>
           </div>
 
           <div className="flex gap-3 pt-2">

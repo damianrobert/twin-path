@@ -18,6 +18,7 @@ const DashboardPage = () => {
   const router = useRouter();
   const userMentorships = useQuery(api.mentorships.getUserMentorships);
   const unseenMessageCount = useQuery(api.messages.getUnseenMessageCount) || { mentorshipUnseen: 0, dmUnseen: 0 };
+  const isAdmin = useQuery(api.admin.isCurrentUserAdmin);
 
   // Redirect to login if user is not authenticated
   useEffect(() => {
@@ -182,6 +183,38 @@ const DashboardPage = () => {
             </Link>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>🚩 My Reports</CardTitle>
+            <CardDescription>
+              Track blog posts you've reported
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/reports">
+              <Button variant="outline" className="w-full">
+                View Reports
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>🛡️ Admin Panel</CardTitle>
+              <CardDescription>
+                Manage platform administration
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin" className={clsx(buttonVariants({ variant: "outline" }), "w-full")}>
+                Admin Dashboard
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

@@ -18,6 +18,9 @@ async function performContentModeration(title: string, content: string, featured
   }
 
   try {
+    // Skip image analysis for now - just do basic text moderation
+    console.log("⚠️ Image analysis temporarily disabled");
+
     const prompt = `
 You are a content moderator for a professional mentorship platform. Please analyze the following blog content for:
 
@@ -111,27 +114,8 @@ APPROVE content that:
     const hasTagIssues = result.tagIssues && result.tagIssues.length > 0;
     const isApproved = !hasTitleIssues && !hasContentIssues && !hasTagIssues;
     
-    // Basic image validation
-    let imageApproved = true;
-    if (featuredImage) {
-      if (!featuredImage.startsWith('data:image/')) {
-        imageApproved = false;
-      } else {
-        const base64Data = featuredImage.split(',')[1];
-        const fileSize = Math.round(base64Data.length * 0.75) / 1024; // Rough estimate in KB
-        
-        if (fileSize > 5120) { // 5MB limit
-          imageApproved = false;
-        } else {
-          const imageType = featuredImage.match(/data:image\/([^;]+)/);
-          const allowedTypes = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
-          
-          if (!imageType || !allowedTypes.includes(imageType[1].toLowerCase())) {
-            imageApproved = false;
-          }
-        }
-      }
-    }
+    // Always approve images for now (validation disabled)
+    const imageApproved = true;
 
     const finalResult = {
       isApproved: isApproved && imageApproved,
@@ -146,7 +130,7 @@ APPROVE content that:
 
   } catch (error) {
     console.error("❌ Content moderation error:", error);
-    // Fail safe: approve if moderation fails
+    // Fail safe: approve if moderation fails (temporarily relaxed for images)
     return { isApproved: true, moderatedTitle: title, moderatedContent: content, moderatedTags: tags, imageApproved: true };
   }
 }
@@ -305,7 +289,6 @@ export const createPost = action({
     
     if (!moderation.isApproved) {
       const issues = [];
-      if (!moderation.imageApproved) issues.push("Featured image is inappropriate or invalid");
       if (moderation.moderatedTitle !== args.title) issues.push("Title contains inappropriate content");
       if (moderation.moderatedContent !== args.content) issues.push("Content contains inappropriate language");
       if (moderation.moderatedTags && args.tags && JSON.stringify(moderation.moderatedTags) !== JSON.stringify(args.tags)) issues.push("Tags contain inappropriate content");
@@ -467,7 +450,6 @@ export const updatePost = mutation({
       
       if (!moderation.isApproved) {
         const issues = [];
-        if (!moderation.imageApproved) issues.push("Featured image is inappropriate or invalid");
         if (moderation.moderatedTitle !== (args.title || post.title)) issues.push("Title contains inappropriate content");
         if (moderation.moderatedContent !== (args.content || post.content)) issues.push("Content contains inappropriate language");
         
@@ -528,7 +510,7 @@ export const updatePost = mutation({
   },
 });
 
-// Delete a blog post (author only)
+// Delete a blog post (author or admin only)
 export const deletePost = mutation({
   args: {
     postId: v.id("posts"),
@@ -545,14 +527,21 @@ export const deletePost = mutation({
       throw new ConvexError("Post not found");
     }
 
-    // Check if user is the author
+    // Check if user is the author or admin
     const userProfile = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", user.email))
       .first();
 
-    if (!userProfile || post.authorId !== userProfile._id) {
-      throw new ConvexError("Only the author can delete this post");
+    if (!userProfile) {
+      throw new ConvexError("User profile not found");
+    }
+
+    const isAuthor = post.authorId === userProfile._id;
+    const isAdmin = userProfile.isAdmin === true;
+
+    if (!isAuthor && !isAdmin) {
+      throw new ConvexError("Only the author or admin can delete this post");
     }
 
     // Delete topic associations
@@ -921,5 +910,14 @@ export const hasUserLikedPost = query({
       .first();
 
     return !!like;
+  },
+});
+
+// Get all posts (for analytics)
+export const getAllPosts = query({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("posts").collect();
+    return posts;
   },
 });

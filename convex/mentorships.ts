@@ -212,3 +212,12 @@ export const closeMentorship = mutation({
     return args.mentorshipId;
   },
 });
+
+// Get all mentorships (for analytics)
+export const getAllMentorships = query({
+  args: {},
+  handler: async (ctx) => {
+    const mentorships = await ctx.db.query("mentorships").collect();
+    return mentorships;
+  },
+});
