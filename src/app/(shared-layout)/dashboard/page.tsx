@@ -184,6 +184,25 @@ const DashboardPage = () => {
           </CardContent>
         </Card>
 
+        {!isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>🎧 Support Cases</CardTitle>
+            <CardDescription>
+              Get help from our support team
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/support">
+              <Button variant="outline" className="w-full">
+                View Support Cases
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        )}
+
+        {!isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle>🚩 My Reports</CardTitle>
@@ -199,6 +218,7 @@ const DashboardPage = () => {
             </Link>
           </CardContent>
         </Card>
+        )}
 
         {isAdmin && (
           <Card>

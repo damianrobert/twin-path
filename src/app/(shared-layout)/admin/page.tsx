@@ -11,7 +11,8 @@ import {
   Users, 
   Settings,
   ArrowRight,
-  Shield
+  Shield,
+  Headphones
 } from "lucide-react";
 import Link from "next/link";
 import { useConvexErrorHandler } from "../../../hooks/useConvexErrorHandler";
@@ -86,7 +87,16 @@ export default function AdminHomePage() {
       href: "/admin/settings",
       color: "text-gray-600 dark:text-gray-400",
       bgColor: "bg-gray-50 dark:bg-gray-950/20",
-      disabled: true,
+      disabled: false,
+    },
+    {
+      title: "Support Cases",
+      description: "Manage user support requests",
+      icon: Headphones,
+      href: "/admin/support",
+      color: "text-purple-600 dark:text-purple-400",
+      bgColor: "bg-purple-50 dark:bg-purple-950/20",
+      disabled: false,
     },
   ];
 

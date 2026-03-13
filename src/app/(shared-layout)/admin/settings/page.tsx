@@ -58,7 +58,7 @@ interface PlatformSettings {
 
 export default function AdminSettingsPage() {
   const { setMaintenanceMode, isMaintenanceMode, maintenanceMessage } = useMaintenance();
-  const { data: platformSettings, isLoading: settingsLoading } = useQuery(api.platformSettings.getPlatformSettings);
+  const platformSettings = useQuery(api.platformSettings.getPlatformSettings);
   const updatePlatformSettingsMutation = useMutation(api.platformSettings.updatePlatformSettings);
   
   // Use platform settings from database as the source of truth
@@ -86,10 +86,10 @@ export default function AdminSettingsPage() {
 
   // Sync local settings with database when loaded
   useEffect(() => {
-    if (platformSettings && !settingsLoading) {
+    if (platformSettings) {
       setSettings(platformSettings);
     }
-  }, [platformSettings, settingsLoading]);
+  }, [platformSettings]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("general");

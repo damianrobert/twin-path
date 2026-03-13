@@ -258,4 +258,36 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }),
+
+  // Support Cases
+  supportCases: defineTable({
+    caseNumber: v.string(),
+    title: v.string(),
+    description: v.string(),
+    category: v.union(v.literal("technical"), v.literal("account"), v.literal("billing"), v.literal("content"), v.literal("other")),
+    priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent")),
+    status: v.union(v.literal("opened"), v.literal("in_progress"), v.literal("resolved"), v.literal("closed")),
+    userId: v.id("users"),
+    assignedToId: v.optional(v.id("users")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+    resolution: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_category", ["category"])
+    .index("by_priority", ["priority"]),
+
+  // Support Case Messages
+  supportCaseMessages: defineTable({
+    caseId: v.id("supportCases"),
+    senderId: v.id("users"),
+    message: v.string(),
+    isInternal: v.boolean(), // true for admin-only messages, false for visible to user
+    createdAt: v.number(),
+  })
+    .index("by_caseId", ["caseId"])
+    .index("by_senderId", ["senderId"]),
 });

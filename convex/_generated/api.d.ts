@@ -22,6 +22,7 @@ import type * as platformSettings from "../platformSettings.js";
 import type * as posts from "../posts.js";
 import type * as presence from "../presence.js";
 import type * as runMigration from "../runMigration.js";
+import type * as supportCases from "../supportCases.js";
 import type * as topics from "../topics.js";
 import type * as users from "../users.js";
 
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   posts: typeof posts;
   presence: typeof presence;
   runMigration: typeof runMigration;
+  supportCases: typeof supportCases;
   topics: typeof topics;
   users: typeof users;
 }>;
