@@ -54,6 +54,7 @@ export const seedMentorProfile = mutation({
         linkedinUrl: args.linkedinUrl,
         yearsOfExperience: args.yearsOfExperience,
         teachingExperience: args.teachingExperience,
+        isOnline: false, // Default to offline for new users
         createdAt: Date.now(),
       });
       return profileId;
@@ -118,6 +119,7 @@ export const createOrUpdateProfile = mutation({
         linkedinUrl: args.linkedinUrl,
         yearsOfExperience: args.yearsOfExperience,
         teachingExperience: args.teachingExperience,
+        isOnline: false, // Default to offline for new users
         createdAt: Date.now(),
       });
       return profileId;

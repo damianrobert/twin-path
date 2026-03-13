@@ -16,6 +16,9 @@ export default defineSchema({
     linkedinUrl: v.optional(v.string()),
     yearsOfExperience: v.optional(v.number()),
     teachingExperience: v.optional(v.string()),
+    // Presence fields
+    isOnline: v.optional(v.boolean()), // Make optional for existing users
+    lastSeen: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 

@@ -14,7 +14,10 @@ import type * as http from "../http.js";
 import type * as mentorshipRequests from "../mentorshipRequests.js";
 import type * as mentorships from "../mentorships.js";
 import type * as messages from "../messages.js";
+import type * as migrations from "../migrations.js";
 import type * as posts from "../posts.js";
+import type * as presence from "../presence.js";
+import type * as runMigration from "../runMigration.js";
 import type * as topics from "../topics.js";
 import type * as users from "../users.js";
 
@@ -31,7 +34,10 @@ declare const fullApi: ApiFromModules<{
   mentorshipRequests: typeof mentorshipRequests;
   mentorships: typeof mentorships;
   messages: typeof messages;
+  migrations: typeof migrations;
   posts: typeof posts;
+  presence: typeof presence;
+  runMigration: typeof runMigration;
   topics: typeof topics;
   users: typeof users;
 }>;

@@ -13,6 +13,8 @@ import { Send, MessageCircle, User, Clock, Search, Check, CheckCheck, Bell } fro
 import GlobalAvatar from "@/components/web/GlobalAvatar";
 import DMRequestModal from "@/components/web/DMRequestModal";
 import ChatSessionItem from "@/components/web/ChatSessionItem";
+import { PresenceIndicator } from "@/components/web/PresenceIndicator";
+import { useMultipleOnlineStatus } from "@/hooks/usePresence";
 
 interface ChatSession {
   _id: Id<"mentorships"> | string;
@@ -51,6 +53,18 @@ export default function ChatPage() {
     api.messages.searchUsers,
     searchQuery.trim() ? { searchQuery: searchQuery.trim() } : "skip"
   ) || [];
+  
+  // Get online status for search results
+  const searchResultStatuses = useMultipleOnlineStatus(
+    searchResults.map(user => user._id)
+  );
+  
+  // Get online status for selected session participant
+  const selectedSessionStatus = useQuery(api.presence.getOnlineStatus, 
+    selectedSession?.otherParticipant._id 
+      ? { userId: selectedSession.otherParticipant._id }
+      : "skip"
+  );
   
   // Get messages for selected session
   const sessionMessages = useQuery(
@@ -202,44 +216,57 @@ export default function ChatPage() {
             <div className="pb-2">
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">Search Results</h3>
-                {searchResults.map((user) => (
-                  <Card key={user._id} className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <GlobalAvatar 
-                          user={{
-                            name: user.name,
-                            role: user.role
-                          }}
-                          size="sm"
-                          clickable={false}
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm">{user.name}</p>
-                            <Badge variant="outline" className="text-xs">
-                              {user.role}
-                            </Badge>
+                {searchResults.map((user) => {
+                  const userStatus = searchResultStatuses[user._id];
+                  const isOnline = userStatus?.isOnline || false;
+                  
+                  return (
+                    <Card key={user._id} className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <GlobalAvatar 
+                              user={{
+                                name: user.name,
+                                role: user.role
+                              }}
+                              size="sm"
+                              clickable={false}
+                            />
+                            {/* Only show presence indicator when user is online */}
+                            {isOnline && (
+                              <div className="absolute -bottom-1 -right-1">
+                                <PresenceIndicator isOnline={isOnline} size="sm" />
+                              </div>
+                            )}
                           </div>
-                          {user.bio && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {user.bio}
-                            </p>
-                          )}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm">{user.name}</p>
+                              <Badge variant="outline" className="text-xs">
+                                {user.role}
+                              </Badge>
+                            </div>
+                            {user.bio && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {user.bio}
+                              </p>
+                            )}
+                          </div>
                         </div>
+                        <DMRequestModal 
+                          recipientId={user._id}
+                          recipientName={user.name}
+                        >
+                          <Button size="sm" variant="outline">
+                            <MessageCircle className="h-3 w-3 mr-1" />
+                            Message
+                          </Button>
+                        </DMRequestModal>
                       </div>
-                      <DMRequestModal 
-                        recipientId={user._id}
-                        recipientName={user.name}
-                      >
-                        <Button size="sm" variant="outline">
-                          <MessageCircle className="h-3 w-3 mr-1" />
-                          Message
-                        </Button>
-                      </DMRequestModal>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -337,14 +364,22 @@ export default function ChatPage() {
               {/* Chat Header */}
               <CardHeader className="pb-3 border-b py-2">
                 <div className="flex items-center gap-3">
-                  <GlobalAvatar 
-                    user={{
-                      name: selectedSession.otherParticipant.name,
-                      role: selectedSession.otherParticipant.role
-                    }}
-                    size="md"
-                    clickable={false}
-                  />
+                  <div className="relative">
+                    <GlobalAvatar 
+                      user={{
+                        name: selectedSession.otherParticipant.name,
+                        role: selectedSession.otherParticipant.role
+                      }}
+                      size="md"
+                      clickable={false}
+                    />
+                    {/* Only show presence indicator when user is online */}
+                    {selectedSessionStatus?.isOnline && (
+                      <div className="absolute -bottom-1 -right-1">
+                        <PresenceIndicator isOnline={true} size="sm" />
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <CardTitle className="text-lg">
                       {selectedSession.otherParticipant.name}
@@ -356,6 +391,11 @@ export default function ChatPage() {
                       <span className="text-xs text-muted-foreground">
                         {selectedSession.type === "mentorship" ? "Active Mentorship" : "Direct Message"}
                       </span>
+                      {selectedSessionStatus?.isOnline && (
+                        <span className="text-xs text-green-600 font-medium">
+                          Online
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

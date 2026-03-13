@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, MessageCircle, Check, CheckCheck, X } from "lucide-react";
 import GlobalAvatar from "./GlobalAvatar";
+import { PresenceIndicator } from "./PresenceIndicator";
 
 interface MentorshipChatModalProps {
   mentorshipId: Id<"mentorships">;
@@ -32,6 +33,11 @@ export default function MentorshipChatModal({
   
   // Get messages for this mentorship
   const messages = useQuery(api.messages.getMessages, { mentorshipId }) || [];
+  
+  // Get online status of other participant
+  const participantStatus = useQuery(api.presence.getOnlineStatus, {
+    userId: otherParticipant._id,
+  });
   
   // Send message mutation
   const sendMessage = useMutation(api.messages.sendMessage);
@@ -80,17 +86,32 @@ export default function MentorshipChatModal({
             <div>
               <h3 className="font-semibold">Mentorship Chat</h3>
               <div className="flex items-center gap-2">
-                <GlobalAvatar 
-                  user={{
-                    name: otherParticipant.name,
-                    role: otherParticipant.role
-                  }}
-                  size="sm"
-                  clickable={false}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {otherParticipant.name}
-                </span>
+                <div className="relative">
+                  <GlobalAvatar 
+                    user={{
+                      name: otherParticipant.name,
+                      role: otherParticipant.role
+                    }}
+                    size="sm"
+                    clickable={false}
+                  />
+                  {/* Only show presence indicator when user is online */}
+                  {participantStatus?.isOnline && (
+                    <div className="absolute -bottom-1 -right-1">
+                      <PresenceIndicator isOnline={true} size="sm" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {otherParticipant.name}
+                  </span>
+                  {participantStatus?.isOnline && (
+                    <span className="text-xs text-green-600 font-medium">
+                      Online
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

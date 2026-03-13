@@ -12,7 +12,7 @@ import { Loader2, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Logo from "./Logo";
 import GlobalAvatar from "./GlobalAvatar";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
   AlertDialog,
@@ -31,6 +31,7 @@ const Navbar = () => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const unreadRequestCount = useQuery(api.mentorshipRequests.getUnreadRequestCount);
+  const updateOnlineStatus = useMutation(api.presence.updateOnlineStatus);
 
   return (
     <nav className="w-full py-5 px-2.5 flex items-center justify-between">
@@ -90,6 +91,14 @@ const Navbar = () => {
                     disabled={isPending}
                     onClick={() =>
                       startTransition(async () => {
+                        // Set user offline first
+                        try {
+                          await updateOnlineStatus({ isOnline: false });
+                        } catch (error) {
+                          console.error("Failed to set offline status:", error);
+                        }
+                        
+                        // Then proceed with logout
                         authClient.signOut({
                           fetchOptions: {
                             onSuccess: () => {

@@ -20,7 +20,8 @@ import {
   Mail,
   Globe,
   Github,
-  Linkedin
+  Linkedin,
+  Star
 } from "lucide-react";
 
 interface AssignmentDetailsModalProps {
@@ -40,6 +41,8 @@ interface Assignment {
   createdAt: number;
   completedAt?: number;
   dueDate?: number;
+  grade?: number; // Grade might not exist for older assignments
+  feedback?: string; // Feedback might not exist for older assignments
   mentorship?: {
     mentor: {
       _id: string;
@@ -232,6 +235,35 @@ const AssignmentDetailsModal: React.FC<AssignmentDetailsModalProps> = ({
               <p className="text-sm leading-relaxed">{assignment.description}</p>
             </div>
           </div>
+
+          {/* Grade and Feedback */}
+          {assignment.grade !== undefined && assignment.grade !== null && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Grade & Feedback</h3>
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <span className="text-2xl font-bold text-yellow-600">{assignment.grade}/100</span>
+                    <div className="text-sm text-muted-foreground">
+                      {assignment.grade >= 90 ? "Excellent" :
+                       assignment.grade >= 80 ? "Good" :
+                       assignment.grade >= 70 ? "Satisfactory" :
+                       assignment.grade >= 60 ? "Needs Improvement" : "Poor"}
+                    </div>
+                  </div>
+                </div>
+                {assignment.feedback && (
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Mentor Feedback:</h4>
+                    <div className="bg-white dark:bg-gray-800 p-3 rounded border">
+                      <p className="text-sm">{assignment.feedback}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Participants */}
           {assignment.mentorship && (

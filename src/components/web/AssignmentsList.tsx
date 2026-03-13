@@ -85,6 +85,49 @@ const AssignmentsList: React.FC<AssignmentsListProps> = ({
   const updateStatus = useMutation(api.assignments.updateAssignmentStatus);
   const uploadAssignmentFiles = useMutation(api.assignments.uploadAssignmentFiles);
   const generateUploadUrl = useMutation(api.assignments.generateUploadUrl);
+  const getDueDateStatus = (dueDate?: number, status?: string, grade?: number) => {
+    if (!dueDate) return null;
+    
+    // Don't show due date status for reviewed assignments with grades
+    if (status === "reviewed" && grade !== undefined && grade !== null) {
+      return null;
+    }
+    
+    const now = Date.now();
+    const due = new Date(dueDate);
+    const diffTime = due.getTime() - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          {Math.abs(diffDays)} days overdue
+        </Badge>
+      );
+    } else if (diffDays === 0) {
+      return (
+        <Badge variant="outline" className="flex items-center gap-1 text-orange-600 border-orange-600">
+          <Clock className="h-3 w-3" />
+          Due today
+        </Badge>
+      );
+    } else if (diffDays <= 3) {
+      return (
+        <Badge variant="outline" className="flex items-center gap-1 text-yellow-600 border-yellow-600">
+          <Clock className="h-3 w-3" />
+          Due in {diffDays} days
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {diffDays} days remaining
+        </Badge>
+      );
+    }
+  };
   const storeUploadedFile = useMutation(api.assignments.storeUploadedFile);
 
   const getStatusBadge = (status: string) => {
@@ -323,22 +366,6 @@ const formatFileSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const getDueDateStatus = (dueDate?: number) => {
-  if (!dueDate) return null;
-  
-  const now = Date.now();
-  const due = new Date(dueDate);
-  const daysUntilDue = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
-  
-  if (daysUntilDue < 0) {
-    return <span className="text-red-600 text-sm">Overdue</span>;
-  } else if (daysUntilDue <= 3) {
-    return <span className="text-orange-600 text-sm">Due in {daysUntilDue} days</span>;
-  } else {
-    return <span className="text-green-600 text-sm">Due in {daysUntilDue} days</span>;
-  }
-};
-
   if (!assignments) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -481,7 +508,7 @@ const getDueDateStatus = (dueDate?: number) => {
                                 Due: {formatDate(assignment.dueDate)}
                               </span>
                             )}
-                            {assignment.dueDate && getDueDateStatus(assignment.dueDate)}
+                            {assignment.dueDate && getDueDateStatus(assignment.dueDate, assignment.status, assignment.grade)}
                           </div>
                         </div>
                         

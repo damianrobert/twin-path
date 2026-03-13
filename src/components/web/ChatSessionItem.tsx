@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bell } from "lucide-react";
 import GlobalAvatar from "./GlobalAvatar";
+import { PresenceIndicator } from "./PresenceIndicator";
 
 interface ChatSession {
   _id: Id<"mentorships"> | string;
@@ -35,6 +36,14 @@ export default function ChatSessionItem({ session, isSelected, onSelect }: ChatS
       : { chatSessionId: session._id as Id<"chatSessions"> }
   ) || 0;
 
+  // Get online status of the other participant
+  const onlineStatus = useQuery(api.presence.getOnlineStatus, {
+    userId: session.otherParticipant._id,
+  });
+
+  const isOnline = onlineStatus?.isOnline || false;
+  const lastSeen = onlineStatus?.lastSeen;
+
   return (
     <Card
       className={`p-3 cursor-pointer transition-colors hover:bg-muted/50 ${
@@ -43,14 +52,22 @@ export default function ChatSessionItem({ session, isSelected, onSelect }: ChatS
       onClick={() => onSelect(session)}
     >
       <div className="flex items-center gap-3">
-        <GlobalAvatar 
-          user={{
-            name: session.otherParticipant.name,
-            role: session.otherParticipant.role
-          }}
-          size="sm"
-          clickable={false}
-        />
+        <div className="relative">
+          <GlobalAvatar 
+            user={{
+              name: session.otherParticipant.name,
+              role: session.otherParticipant.role
+            }}
+            size="sm"
+            clickable={false}
+          />
+          {/* Only show presence indicator when user is online */}
+          {isOnline && (
+            <div className="absolute -bottom-1 -right-1">
+              <PresenceIndicator isOnline={isOnline} size="sm" />
+            </div>
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium text-sm truncate">
