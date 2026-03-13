@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { PenTool, Save, Eye, Clock, Hash, FileText, Image, AlertCircle, Upload, Link as LinkIcon } from "lucide-react";
+import { PenTool, Save, Eye, Clock, Hash, FileText, Image, AlertCircle, Upload, Link as LinkIcon, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function CreateBlogPage() {
@@ -31,6 +32,9 @@ export default function CreateBlogPage() {
   const [selectedTopics, setSelectedTopics] = useState<Id<"topics">[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [isGeneratingSlug, setIsGeneratingSlug] = useState(false);
+  const [isAnalyzingContent, setIsAnalyzingContent] = useState(false);
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [rejectionIssues, setRejectionIssues] = useState<string[]>([]);
 
   // Get current user profile to check role
   const userProfile = useQuery(api.users.getCurrentProfile);
@@ -41,8 +45,8 @@ export default function CreateBlogPage() {
   // Get all topics for selection
   const topics = useQuery(api.topics.getAllTopics) || [];
 
-  // Mutations
-  const createPost = useMutation(api.posts.createPost);
+  // Actions and Mutations
+  const createPost = useAction(api.posts.createPost);
 
   // Redirect non-mentors
   useEffect(() => {
@@ -195,7 +199,10 @@ export default function CreateBlogPage() {
     }
 
     try {
-      await createPost({
+      setIsAnalyzingContent(true);
+      toast.loading("Please wait while AI checks your content...", { id: "content-analysis" });
+      
+      const result = await createPost({
         title: title.trim(),
         slug: slug.trim(),
         excerpt: excerpt.trim() || undefined,
@@ -206,19 +213,44 @@ export default function CreateBlogPage() {
         topicIds: selectedTopics.length > 0 ? selectedTopics : undefined,
       });
 
-      toast.success(`Blog post ${status === "published" ? "published" : "saved as draft"} successfully!`);
-      
-      // Redirect to blog page after successful submission
-      if (status === "published") {
-        router.push("/blog");
+      toast.dismiss("content-analysis");
+      setIsAnalyzingContent(false);
+
+      if (result.success) {
+        toast.success(`Blog post ${status === "published" ? "published" : "saved as draft"} successfully!`);
+        
+        // Redirect to blog page after successful submission
+        if (status === "published") {
+          router.push("/blog");
+        } else {
+          // For drafts, you could redirect to dashboard or stay on page
+          router.push("/dashboard/blog");
+        }
       } else {
-        // For drafts, you could redirect to dashboard or stay on page
-        router.push("/dashboard/blog");
+        // Handle content moderation rejection
+        console.log("🔍 Full result object:", result);
+        if (result.error === "Content not approved") {
+          console.log("🔍 Moderation issues:", result.issues);
+          setRejectionIssues(result.issues);
+          setRejectionModalOpen(true);
+        } else {
+          toast.error(result.error || "Failed to create blog post");
+        }
       }
       
     } catch (error) {
+      toast.dismiss("content-analysis");
+      setIsAnalyzingContent(false);
       console.error("Error creating post:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create blog post");
+      
+      // Handle other unexpected errors
+      if (error instanceof Error && error.message.includes("slug already exists")) {
+        toast.error("This URL slug is already taken. Please choose a different one.");
+      } else if (error instanceof Error && error.message.includes("Only mentors can create blog posts")) {
+        toast.error("Only mentors can create blog posts");
+      } else {
+        toast.error(error instanceof Error ? error.message : "Failed to create blog post");
+      }
     }
   };
 
@@ -465,7 +497,7 @@ export default function CreateBlogPage() {
               Select topics that best describe your blog post for better discoverability
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {topics.map((topic) => (
+              {topics.map((topic: Doc<"topics">) => (
                 <div key={topic._id} className="flex items-center space-x-2">
                   <Checkbox
                     id={topic._id}
@@ -556,15 +588,72 @@ export default function CreateBlogPage() {
 
         {/* Submit Buttons */}
         <div className="flex gap-4">
-          <Button type="submit" disabled={!title.trim() || !content.trim() || !slug.trim()}>
-            <Save className="h-4 w-4 mr-2" />
-            {status === "published" ? "Publish Post" : "Save Draft"}
+          <Button 
+            type="submit" 
+            disabled={!title.trim() || !content.trim() || !slug.trim() || isAnalyzingContent}
+          >
+            {isAnalyzingContent ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                Analyzing Content...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                {status === "published" ? "Publish Post" : "Save Draft"}
+              </>
+            )}
           </Button>
-          <Button type="button" variant="outline" onClick={() => window.history.back()}>
+          <Button type="button" variant="outline" onClick={() => window.history.back()} disabled={isAnalyzingContent}>
             Cancel
           </Button>
         </div>
       </form>
+
+      {/* Content Rejection Modal */}
+      <Dialog open={rejectionModalOpen} onOpenChange={setRejectionModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Content Not Approved
+            </DialogTitle>
+            <DialogDescription>
+              Your blog post could not be published due to the following issues:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            {rejectionIssues.map((issue, index) => (
+              <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded-lg">
+                <X className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                <span className="text-sm">{issue}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Please review and revise your content:</strong>
+            </p>
+            <ul className="text-xs text-blue-700 mt-1 space-y-1">
+              <li>• Ensure your title is at least 3 characters and meaningful</li>
+              <li>• Provide substantial content (at least 10 characters)</li>
+              <li>• Use professional language and avoid inappropriate words</li>
+              <li>• Make sure tags are relevant to your content</li>
+            </ul>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button 
+              onClick={() => setRejectionModalOpen(false)}
+              className="flex-1"
+            >
+              I'll Fix It
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

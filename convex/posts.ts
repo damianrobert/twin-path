@@ -1,11 +1,339 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { ConvexError } from "convex/values";
 import { authComponent } from "./auth";
-import { Doc } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
-// Create a new blog post (mentors only)
-export const createPost = mutation({
+// Content moderation helper function (inline)
+async function performContentModeration(title: string, content: string, featuredImage?: string, tags?: string[]) {
+  console.log("🔍 Starting content moderation for:", { title: title.substring(0, 50), contentLength: content.length, hasImage: !!featuredImage, tags: tags || [] });
+  
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  
+  if (!GEMINI_API_KEY) {
+    console.log("⚠️ No Gemini API key found, skipping moderation");
+    // If no API key, skip moderation (fail safe)
+    return { isApproved: true, moderatedTitle: title, moderatedContent: content, moderatedTags: tags, imageApproved: true };
+  }
+
+  try {
+    const prompt = `
+You are a content moderator for a professional mentorship platform. Please analyze the following blog content for:
+
+1. Profanity and curse words
+2. Offensive or hateful language
+3. Inappropriate content
+4. Spam or promotional content
+5. Personal information sharing
+6. Some curse words may be typed in reverse (e.g., "suck" -> "kcus")
+7. Low-quality content: single characters, gibberish, random text, meaningless content
+8. Title and content must be substantial and meaningful
+
+Title: "${title}"
+Content: "${content}"
+Tags: ${tags ? JSON.stringify(tags) : "[]"}
+
+Respond in JSON format with:
+{
+  "isApproved": true/false,
+  "titleIssues": ["list of title issues"],
+  "contentIssues": ["list of content issues"],
+  "tagIssues": ["list of tag issues"],
+  "moderatedTitle": "title with inappropriate words replaced with ***",
+  "moderatedContent": "content with inappropriate words replaced with ***",
+  "moderatedTags": ["tags with inappropriate words replaced with ***"]
+}
+
+Be strict but reasonable. Educational content about difficult topics is allowed if it's professional.
+Tags should be professional and relevant to the content.
+
+REJECT content that:
+- Has title less than 3 characters or is just random letters/numbers. If rejected for this, add "Title is too short or meaningless" to titleIssues.
+- Has content less than 10 characters or is meaningless gibberish. If rejected for this, add "Content is too short or meaningless" to contentIssues.
+- Contains only special characters, emojis, or random symbols. If rejected for this, add "Content contains only special characters/symbols" to contentIssues.
+- Is clearly spam or automated text generation. If rejected for this, add "Content is spam or automated" to contentIssues.
+- Has no meaningful value for readers. If rejected for this, add "Content has no meaningful value" to contentIssues.
+
+APPROVE content that:
+- Has meaningful, substantial titles and content
+- Provides value to the mentorship community
+- Is written in a professional or educational tone
+- Contains real thoughts, experiences, or knowledge
+`;
+
+    console.log("📡 Calling Gemini API...");
+    console.log("🔑 API Key available:", !!GEMINI_API_KEY);
+    console.log("🔑 API Key length:", GEMINI_API_KEY?.length || 0);
+    
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      })
+    });
+
+    console.log("📡 Gemini API response status:", response.status);
+    console.log("📡 Gemini API response headers:", response.headers);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log("📡 Gemini API error response:", errorText);
+      throw new Error(`Moderation API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!text) {
+      throw new Error("No response from Gemini API");
+    }
+
+    console.log("📝 Gemini API response:", text.substring(0, 200));
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Invalid response format from Gemini API");
+    }
+
+    const result = JSON.parse(jsonMatch[0]);
+    console.log("✅ Parsed moderation result:", result);
+    
+    const hasTitleIssues = result.titleIssues && result.titleIssues.length > 0;
+    const hasContentIssues = result.contentIssues && result.contentIssues.length > 0;
+    const hasTagIssues = result.tagIssues && result.tagIssues.length > 0;
+    const isApproved = !hasTitleIssues && !hasContentIssues && !hasTagIssues;
+    
+    // Basic image validation
+    let imageApproved = true;
+    if (featuredImage) {
+      if (!featuredImage.startsWith('data:image/')) {
+        imageApproved = false;
+      } else {
+        const base64Data = featuredImage.split(',')[1];
+        const fileSize = Math.round(base64Data.length * 0.75) / 1024; // Rough estimate in KB
+        
+        if (fileSize > 5120) { // 5MB limit
+          imageApproved = false;
+        } else {
+          const imageType = featuredImage.match(/data:image\/([^;]+)/);
+          const allowedTypes = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+          
+          if (!imageType || !allowedTypes.includes(imageType[1].toLowerCase())) {
+            imageApproved = false;
+          }
+        }
+      }
+    }
+
+    const finalResult = {
+      isApproved: isApproved && imageApproved,
+      moderatedTitle: hasTitleIssues ? result.moderatedTitle : title,
+      moderatedContent: hasContentIssues ? result.moderatedContent : content,
+      moderatedTags: hasTagIssues ? result.moderatedTags : tags,
+      imageApproved
+    };
+
+    console.log("🏁 Final moderation result:", finalResult);
+    return finalResult;
+
+  } catch (error) {
+    console.error("❌ Content moderation error:", error);
+    // Fail safe: approve if moderation fails
+    return { isApproved: true, moderatedTitle: title, moderatedContent: content, moderatedTags: tags, imageApproved: true };
+  }
+}
+
+// Content moderation action
+export const moderateContentAction = action({
+  args: {
+    title: v.string(),
+    content: v.string(),
+    featuredImage: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    console.log("🔍 Starting content moderation for:", { title: args.title.substring(0, 50), contentLength: args.content.length, hasImage: !!args.featuredImage });
+    
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    
+    if (!GEMINI_API_KEY) {
+      console.log("⚠️ No Gemini API key found, skipping moderation");
+      // If no API key, skip moderation (fail safe)
+      return { isApproved: true, moderatedTitle: args.title, moderatedContent: args.content, imageApproved: true };
+    }
+
+    try {
+      const prompt = `
+You are a content moderator for a professional mentorship platform. Please analyze the following blog content for:
+
+1. Profanity and curse words
+2. Offensive or hateful language
+3. Inappropriate content
+4. Spam or promotional content
+5. Personal information sharing
+
+Title: "${args.title}"
+Content: "${args.content}"
+
+Respond in JSON format with:
+{
+  "isApproved": true/false,
+  "titleIssues": ["list of title issues"],
+  "contentIssues": ["list of content issues"],
+  "moderatedTitle": "title with inappropriate words replaced with ***",
+  "moderatedContent": "content with inappropriate words replaced with ***"
+}
+
+Be strict but reasonable. Educational content about difficult topics is allowed if it's professional.
+`;
+
+      console.log("📡 Calling Gemini API...");
+      console.log("🔑 API Key available:", !!GEMINI_API_KEY);
+      console.log("🔑 API Key length:", GEMINI_API_KEY?.length || 0);
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }]
+        })
+      });
+
+      console.log("📡 Gemini API response status:", response.status);
+      console.log("📡 Gemini API response headers:", response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log("📡 Gemini API error response:", errorText);
+        throw new Error(`Moderation API error: ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!text) {
+        throw new Error("No response from Gemini API");
+      }
+
+      console.log("📝 Gemini API response:", text.substring(0, 200));
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("Invalid response format from Gemini API");
+      }
+
+      const result = JSON.parse(jsonMatch[0]);
+      console.log("✅ Parsed moderation result:", result);
+      
+      const hasTitleIssues = result.titleIssues && result.titleIssues.length > 0;
+      const hasContentIssues = result.contentIssues && result.contentIssues.length > 0;
+      const isApproved = !hasTitleIssues && !hasContentIssues;
+      
+      // Basic image validation
+      let imageApproved = true;
+      if (args.featuredImage) {
+        if (!args.featuredImage.startsWith('data:image/')) {
+          imageApproved = false;
+        } else {
+          const base64Data = args.featuredImage.split(',')[1];
+          const fileSize = Math.round(base64Data.length * 0.75) / 1024; // Rough estimate in KB
+          
+          if (fileSize > 5120) { // 5MB limit
+            imageApproved = false;
+          } else {
+            const imageType = args.featuredImage.match(/data:image\/([^;]+)/);
+            const allowedTypes = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+            
+            if (!imageType || !allowedTypes.includes(imageType[1].toLowerCase())) {
+              imageApproved = false;
+            }
+          }
+        }
+      }
+
+      const finalResult = {
+        isApproved: isApproved && imageApproved,
+        moderatedTitle: hasTitleIssues ? result.moderatedTitle : args.title,
+        moderatedContent: hasContentIssues ? result.moderatedContent : args.content,
+        imageApproved
+      };
+
+      console.log("🏁 Final moderation result:", finalResult);
+      return finalResult;
+
+    } catch (error) {
+      console.error("❌ Content moderation error:", error);
+      // Fail safe: approve if moderation fails
+      return { isApproved: true, moderatedTitle: args.title, moderatedContent: args.content, imageApproved: true };
+    }
+  },
+});
+
+// Create a new blog post (mentors only) - as action to allow fetch()
+export const createPost = action({
+  args: {
+    title: v.string(),
+    slug: v.string(),
+    excerpt: v.optional(v.string()),
+    content: v.string(),
+    status: v.union(v.literal("draft"), v.literal("published")),
+    featuredImage: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    topicIds: v.optional(v.array(v.id("topics"))),
+  },
+  handler: async (ctx, args): Promise<{ success: true; postId: Id<"posts"> } | { success: false; error: string; issues: string[] }> => {
+    console.log("🚀 createPost called with:", { title: args.title, status: args.status, contentLength: args.content.length });
+    
+    // First run the content moderation
+    console.log("👤 Starting content moderation...");
+    const moderation = await performContentModeration(args.title, args.content, args.featuredImage, args.tags);
+    
+    console.log("🔍 Moderation result:", moderation);
+    
+    if (!moderation.isApproved) {
+      const issues = [];
+      if (!moderation.imageApproved) issues.push("Featured image is inappropriate or invalid");
+      if (moderation.moderatedTitle !== args.title) issues.push("Title contains inappropriate content");
+      if (moderation.moderatedContent !== args.content) issues.push("Content contains inappropriate language");
+      if (moderation.moderatedTags && args.tags && JSON.stringify(moderation.moderatedTags) !== JSON.stringify(args.tags)) issues.push("Tags contain inappropriate content");
+      
+      console.log("❌ Content rejected:", issues);
+      return { success: false, error: "Content not approved", issues };
+    }
+
+    console.log("✅ Content approved, proceeding with post creation...");
+
+    // Now run the database operations as a mutation
+    const result = await ctx.runMutation(api.posts.createPostInternal, {
+      title: moderation.moderatedTitle || args.title,
+      slug: args.slug,
+      excerpt: args.excerpt,
+      content: moderation.moderatedContent || args.content,
+      status: args.status,
+      featuredImage: args.featuredImage,
+      tags: moderation.moderatedTags || args.tags,
+      topicIds: args.topicIds,
+    });
+
+    return result;
+  },
+});
+
+// Internal mutation for database operations (no API calls)
+export const createPostInternal = mutation({
   args: {
     title: v.string(),
     slug: v.string(),
@@ -60,7 +388,7 @@ export const createPost = mutation({
       publishedAt: args.status === "published" ? now : undefined,
     });
 
-    // Associate topics with the post
+    // Handle topic associations
     if (args.topicIds && args.topicIds.length > 0) {
       for (const topicId of args.topicIds) {
         await ctx.db.insert("postTopics", {
@@ -70,7 +398,7 @@ export const createPost = mutation({
       }
     }
 
-    return { success: true, postId };
+    return { success: true, postId } as { success: true; postId: Id<"posts"> };
   },
 });
 
@@ -125,20 +453,45 @@ export const updatePost = mutation({
     const wasDraft = post.status === "draft";
     const isNowPublished = args.status === "published" || (!args.status && post.status === "published");
 
+    // Content moderation for updated content
+    let moderatedTitle = args.title;
+    let moderatedContent = args.content;
+    let moderatedImage = args.featuredImage;
+
+    if (args.title !== undefined || args.content !== undefined || args.featuredImage !== undefined) {
+      const moderation = await performContentModeration(
+        args.title || post.title, 
+        args.content || post.content, 
+        args.featuredImage || post.featuredImage
+      );
+      
+      if (!moderation.isApproved) {
+        const issues = [];
+        if (!moderation.imageApproved) issues.push("Featured image is inappropriate or invalid");
+        if (moderation.moderatedTitle !== (args.title || post.title)) issues.push("Title contains inappropriate content");
+        if (moderation.moderatedContent !== (args.content || post.content)) issues.push("Content contains inappropriate language");
+        
+        throw new ConvexError(`Content not approved: ${issues.join(", ")}`);
+      }
+
+      moderatedTitle = moderation.moderatedTitle;
+      moderatedContent = moderation.moderatedContent;
+    }
+
     // Update the post
     const updateData: any = {
       updatedAt: now,
     };
 
-    if (args.title !== undefined) updateData.title = args.title;
+    if (moderatedTitle !== undefined) updateData.title = moderatedTitle;
     if (args.slug !== undefined) updateData.slug = args.slug;
     if (args.excerpt !== undefined) updateData.excerpt = args.excerpt;
-    if (args.content !== undefined) {
-      updateData.content = args.content;
-      updateData.readingTime = calculateReadingTime(args.content);
+    if (moderatedContent !== undefined) {
+      updateData.content = moderatedContent;
+      updateData.readingTime = calculateReadingTime(moderatedContent);
     }
     if (args.status !== undefined) updateData.status = args.status;
-    if (args.featuredImage !== undefined) updateData.featuredImage = args.featuredImage;
+    if (moderatedImage !== undefined) updateData.featuredImage = moderatedImage;
     if (args.tags !== undefined) updateData.tags = args.tags;
 
     // Set publishedAt if publishing for the first time
@@ -402,6 +755,25 @@ export const getPostsByAuthor = query({
     );
 
     return postsWithDetails.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+// Test content moderation
+export const testContentModeration = mutation({
+  args: {
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    console.log("🧪 Testing content moderation with:", args.content);
+    
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    console.log("🔑 API Key available:", !!GEMINI_API_KEY);
+    console.log("🔑 API Key length:", GEMINI_API_KEY?.length || 0);
+    
+    const moderation = await performContentModeration("Test Title", args.content);
+    console.log("🧪 Test moderation result:", moderation);
+    
+    return moderation;
   },
 });
 

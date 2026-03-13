@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,7 +76,7 @@ export default function BlogPage() {
   const topics = useQuery(api.topics.getAllTopics) || [];
 
   // Filter posts by search query
-  const filteredPosts = posts.filter((post) => {
+  const filteredPosts = posts.filter((post: BlogPost) => {
     if (!searchQuery.trim()) return true;
     
     const query = searchQuery.toLowerCase();
@@ -175,7 +175,7 @@ export default function BlogPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Topics</SelectItem>
-              {topics.map((topic) => (
+              {topics.map((topic: Doc<"topics">) => (
                 <SelectItem key={topic._id} value={topic._id}>
                   {topic.name}
                 </SelectItem>
@@ -241,7 +241,7 @@ export default function BlogPage() {
                 {/* Topics */}
                 {post.topics.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2">
-                    {post.topics.filter(Boolean).slice(0, 2).map((topic) => (
+                    {post.topics.filter(Boolean).slice(0, 2).map((topic: NonNullable<typeof post.topics>[0]) => (
                       <Badge key={topic!._id} variant="secondary" className="text-xs">
                         {topic!.name}
                       </Badge>
@@ -273,7 +273,7 @@ export default function BlogPage() {
                 {/* Tags */}
                 {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {post.tags.slice(0, 3).map((tag) => (
+                    {post.tags.slice(0, 3).map((tag: string) => (
                       <Badge key={tag} variant="outline" className="text-xs">
                         #{tag}
                       </Badge>

@@ -207,7 +207,7 @@ export default function BlogPostPage() {
           {/* Topics */}
           {post.topics.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {post.topics.map((topic) => (
+              {post.topics.map((topic: BlogPost['topics'][number]) => (
                 topic && (
                   <Badge key={topic._id} variant="secondary">
                     <Hash className="h-3 w-3 mr-1" />
@@ -268,7 +268,7 @@ export default function BlogPostPage() {
         {/* Tags */}
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {post.tags.map((tag) => (
+            {post.tags.map((tag: string) => (
               <Badge key={tag} variant="outline">
                 #{tag}
               </Badge>
