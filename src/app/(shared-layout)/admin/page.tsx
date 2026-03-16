@@ -12,7 +12,8 @@ import {
   Settings,
   ArrowRight,
   Shield,
-  Headphones
+  Headphones,
+  Bell
 } from "lucide-react";
 import Link from "next/link";
 import { useConvexErrorHandler } from "../../../hooks/useConvexErrorHandler";
@@ -23,6 +24,7 @@ export default function AdminHomePage() {
   const pendingReports = useQuery(api.blogReports.getPendingReports);
   const adminUsers = useQuery(api.admin.getAdminUsers);
   const allUsers = useQuery(api.admin.getAllUsers);
+  const supportStats = useQuery(api.supportCases.getSupportCaseStatistics);
   
   // Handle admin access errors - ALWAYS call this hook
   useConvexErrorHandler();
@@ -115,14 +117,24 @@ export default function AdminHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {adminCards.map((card) => {
           const Icon = card.icon;
+          const openCasesCount = card.title === "Support Cases" ? supportStats?.opened || 0 : 0;
+          
           return (
             <Card 
               key={card.title} 
-              className={`hover:shadow-lg transition-shadow cursor-pointer ${
+              className={`hover:shadow-lg transition-shadow cursor-pointer relative ${
                 card.disabled ? "opacity-50 cursor-not-allowed" : ""
               }`}
               onClick={() => !card.disabled && router.push(card.href)}
             >
+              {card.title === "Support Cases" && openCasesCount > 0 && (
+                <div className="absolute top-4 right-4 z-10">
+                  <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                    <Bell className="h-3 w-3" />
+                    {openCasesCount}
+                  </div>
+                </div>
+              )}
               <CardHeader>
                 <div className={`w-12 h-12 rounded-lg ${card.bgColor} flex items-center justify-center mb-4`}>
                   <Icon className={`h-6 w-6 ${card.color}`} />
@@ -164,7 +176,7 @@ export default function AdminHomePage() {
             <CardTitle>Quick Stats</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-muted rounded-lg">
                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {pendingReports?.length || 0}
@@ -182,6 +194,36 @@ export default function AdminHomePage() {
                   {allUsers?.length || 0}
                 </div>
                 <div className="text-sm text-muted-foreground">Total Users</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {supportStats?.opened || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Open Cases</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {supportStats?.inProgress || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">In Progress</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                  {supportStats?.resolved || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Resolved</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+                  {supportStats?.total || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Cases</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {supportStats?.byPriority?.urgent || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Urgent Cases</div>
               </div>
             </div>
           </CardContent>

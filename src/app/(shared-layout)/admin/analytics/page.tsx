@@ -19,7 +19,8 @@ import {
   Calendar,
   Target,
   Award,
-  AlertTriangle
+  AlertTriangle,
+  Headphones
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export default function AdminAnalyticsPage() {
   const allMessages = useQuery(api.messages.getAllMessages) || [];
   const allReports = useQuery(api.blogReports.getPendingReports) || [];
   const allTopics = useQuery(api.topics.getAllTopics) || [];
+  const supportStats = useQuery(api.supportCases.getSupportCaseStatistics);
 
   // Calculate analytics
   const totalUsers = allUsers.length;
@@ -49,6 +51,14 @@ export default function AdminAnalyticsPage() {
   const totalMessages = allMessages.length;
   const totalReports = allReports.length;
   const totalTopics = allTopics.length;
+
+  // Support case analytics
+  const totalCases = supportStats?.total || 0;
+  const openCases = supportStats?.opened || 0;
+  const inProgressCases = supportStats?.inProgress || 0;
+  const resolvedCases = supportStats?.resolved || 0;
+  const closedCases = supportStats?.closed || 0;
+  const urgentCases = supportStats?.byPriority?.urgent || 0;
 
   // User role distribution
   const mentors = allUsers.filter(user => user.role === "mentor" || user.role === "both").length;
@@ -185,7 +195,7 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* Enhanced Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -254,6 +264,24 @@ export default function AdminAnalyticsPage() {
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
               <Users className="h-3 w-3" />
               <span>{usersInMentorships} participants</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Support Cases</CardTitle>
+            <Headphones className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCases}</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <AlertTriangle className="h-3 w-3 text-red-500" />
+              <span>{openCases} need attention</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+              <Award className="h-3 w-3" />
+              <span>{resolvedCases} resolved</span>
             </div>
           </CardContent>
         </Card>
@@ -476,6 +504,130 @@ export default function AdminAnalyticsPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{completedMentorships}</span>
                   <Badge variant="outline" className="text-blue-600">Done</Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Support Cases Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Headphones className="h-5 w-5" />
+              Support Case Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-sm">Open</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{openCases}</span>
+                  <Badge variant="outline" className="text-red-600">Needs Attention</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span className="text-sm">In Progress</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{inProgressCases}</span>
+                  <Badge variant="outline" className="text-yellow-600">Working</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Resolved</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{resolvedCases}</span>
+                  <Badge variant="outline" className="text-green-600">Completed</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                  <span className="text-sm">Closed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{closedCases}</span>
+                  <Badge variant="outline" className="text-gray-600">Archived</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  <span className="text-sm">Urgent</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-red-600">{urgentCases}</span>
+                  <Badge variant="outline" className="text-red-600">High Priority</Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Support Case Metrics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Total Cases</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{totalCases}</span>
+                  <Badge variant="outline">All time</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Resolution Rate</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-green-600">
+                    {totalCases > 0 ? ((resolvedCases / totalCases) * 100).toFixed(1) : 0}%
+                  </span>
+                  <Badge variant="outline" className="text-green-600">Success</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Active Cases</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-orange-600">{openCases + inProgressCases}</span>
+                  <Badge variant="outline" className="text-orange-600">Pending</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Urgent Cases</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-red-600">{urgentCases}</span>
+                  <Badge variant="outline" className="text-red-600">Immediate</Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Avg Resolution Time</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">--</span>
+                  <Badge variant="outline">Coming Soon</Badge>
                 </div>
               </div>
             </div>

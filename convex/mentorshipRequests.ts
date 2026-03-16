@@ -112,7 +112,7 @@ export const getMentorshipRequests = query({
       return [];
     }
 
-    // Get requests where user is either mentor or mentee
+    // Get requests where user is either mentor or mentee, ordered by newest first
     const requests = await ctx.db
       .query("mentorshipRequests")
       .filter((q) =>
@@ -121,6 +121,7 @@ export const getMentorshipRequests = query({
           q.eq(q.field("menteeId"), userProfile._id)
         )
       )
+      .order("desc")
       .collect();
 
     // Fetch related data for each request

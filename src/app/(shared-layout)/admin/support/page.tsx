@@ -23,7 +23,8 @@ import {
   Calendar,
   User,
   Settings,
-  RefreshCw
+  RefreshCw,
+  ArrowLeft
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
