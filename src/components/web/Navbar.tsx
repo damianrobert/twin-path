@@ -48,6 +48,9 @@ const Navbar = () => {
           <Link className={buttonVariants({ variant: "ghost" })} href="/blog">
             Blog
           </Link>
+          <Link className={buttonVariants({ variant: "ghost" })} href="/courses">
+            Courses
+          </Link>
           <Link className={buttonVariants({ variant: "ghost" })} href="/mentors">
             Find mentor
           </Link>

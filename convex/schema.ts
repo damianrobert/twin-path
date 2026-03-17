@@ -290,4 +290,87 @@ export default defineSchema({
   })
     .index("by_caseId", ["caseId"])
     .index("by_senderId", ["senderId"]),
+
+  // Courses
+  courses: defineTable({
+    title: v.string(),
+    description: v.string(),
+    instructorId: v.id("users"), // The mentor who created the course
+    topicId: v.id("topics"), // Primary topic for the course
+    status: v.union(v.literal("draft"), v.literal("published"), v.literal("archived")),
+    thumbnail: v.optional(v.string()), // Course thumbnail image URL
+    difficulty: v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")),
+    estimatedDuration: v.optional(v.number()), // Estimated completion time in minutes
+    prerequisites: v.optional(v.array(v.string())), // Course prerequisites
+    learningObjectives: v.optional(v.array(v.string())), // Learning objectives
+    enrollmentCount: v.optional(v.number()), // Number of enrolled students
+    rating: v.optional(v.number()), // Average rating (0-5)
+    reviewCount: v.optional(v.number()), // Number of reviews
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+    publishedAt: v.optional(v.number()),
+  }).index("by_instructor", ["instructorId"])
+   .index("by_topic", ["topicId"])
+   .index("by_status", ["status"])
+   .index("by_published", ["status", "publishedAt"]), // For listing published courses
+
+  // Course Modules
+  courseModules: defineTable({
+    courseId: v.id("courses"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    order: v.number(), // Module order within the course
+    videoUrl: v.optional(v.string()), // Video file URL
+    videoName: v.optional(v.string()), // Original video file name
+    videoSize: v.optional(v.number()), // Video file size in bytes
+    videoType: v.optional(v.string()), // Video MIME type
+    fileUrl: v.optional(v.string()), // Additional file URL (PDF, documents, etc.)
+    fileName: v.optional(v.string()), // Original file name
+    fileSize: v.optional(v.number()), // File size in bytes
+    fileType: v.optional(v.string()), // File MIME type
+    isPublished: v.boolean(), // Whether this module is published
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  }).index("by_course", ["courseId"])
+   .index("by_course_order", ["courseId", "order"]), // For ordered module listing
+
+  // Course Enrollments
+  courseEnrollments: defineTable({
+    courseId: v.id("courses"),
+    studentId: v.id("users"), // The mentee enrolled in the course
+    enrolledAt: v.number(),
+    completedAt: v.optional(v.number()), // When the course was completed
+    progress: v.number(), // Progress percentage (0-100)
+    lastAccessedAt: v.optional(v.number()), // Last time the student accessed the course
+    completedModules: v.array(v.id("courseModules")), // List of completed module IDs
+    currentModule: v.optional(v.id("courseModules")), // Currently active module
+  }).index("by_course", ["courseId"])
+   .index("by_student", ["studentId"])
+   .index("by_course_student", ["courseId", "studentId"]), // For checking enrollment status
+
+  // Course Progress Tracking
+  moduleProgress: defineTable({
+    enrollmentId: v.id("courseEnrollments"),
+    moduleId: v.id("courseModules"),
+    studentId: v.id("users"),
+    isCompleted: v.boolean(),
+    completedAt: v.optional(v.number()),
+    watchTime: v.optional(v.number()), // For video modules - time watched in seconds
+    lastPosition: v.optional(v.number()), // For video modules - last position in seconds
+  }).index("by_enrollment", ["enrollmentId"])
+   .index("by_student_module", ["studentId", "moduleId"])
+   .index("by_module", ["moduleId"]), // For module completion statistics
+
+  // Course Reviews
+  courseReviews: defineTable({
+    courseId: v.id("courses"),
+    studentId: v.id("users"),
+    rating: v.number(), // 1-5 rating
+    comment: v.optional(v.string()),
+    isPublic: v.boolean(), // Whether review is public
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  }).index("by_course", ["courseId"])
+   .index("by_student", ["studentId"])
+   .index("by_course_student", ["courseId", "studentId"]), // For checking if user already reviewed
 });

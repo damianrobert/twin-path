@@ -111,6 +111,42 @@ const DashboardPage = () => {
           </CardContent>
         </Card>
 
+        {(currentProfile.role === "mentor" || currentProfile.role === "both") && (
+          <Card>
+            <CardHeader>
+              <CardTitle>📚 My Courses</CardTitle>
+              <CardDescription>
+                Create and manage your courses
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/courses">
+                <Button variant="outline" className="w-full">
+                  Manage Courses
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {(currentProfile.role === "mentee" || currentProfile.role === "both") && (
+          <Card>
+            <CardHeader>
+              <CardTitle>🎓 My Learning</CardTitle>
+              <CardDescription>
+                View your enrolled courses and progress
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/my-courses">
+                <Button variant="outline" className="w-full">
+                  My Courses
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
         {(currentProfile.role === "mentee" || currentProfile.role === "both") && (
           <Card>
             <CardHeader>
