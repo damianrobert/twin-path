@@ -27,6 +27,7 @@ import type * as runMigration from "../runMigration.js";
 import type * as supportCases from "../supportCases.js";
 import type * as topics from "../topics.js";
 import type * as users from "../users.js";
+import type * as validation from "../validation.js";
 
 import type {
   ApiFromModules,
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   supportCases: typeof supportCases;
   topics: typeof topics;
   users: typeof users;
+  validation: typeof validation;
 }>;
 
 /**

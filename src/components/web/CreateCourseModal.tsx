@@ -16,16 +16,9 @@ import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
+import { contentSchemas } from "@/lib/validation";
 
-const courseSchema = z.object({
-  title: z.string().min(1, "Title is required").max(100, "Title too long"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  topicId: z.string().min(1, "Topic is required"),
-  difficulty: z.enum(["beginner", "intermediate", "advanced"]),
-  estimatedDuration: z.number().optional(),
-  prerequisites: z.array(z.string()).optional(),
-  learningObjectives: z.array(z.string()).optional(),
-});
+const courseSchema = contentSchemas.course;
 
 type CourseFormData = z.infer<typeof courseSchema>;
 

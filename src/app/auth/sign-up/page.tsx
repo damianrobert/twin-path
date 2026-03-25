@@ -1,6 +1,7 @@
 "use client";
 
 import { signUpSchema } from "@/app/schemas/auth";
+import { ValidatedForm, ValidatedInput, SecurityIndicator } from "@/components/ui/validated-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,40 +10,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import z from "zod";
 import { useMaintenance } from "@/contexts/MaintenanceContext";
 import { AlertTriangle } from "lucide-react";
 
-const SignUpPage = () => {
+  const SignUpPage = () => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { isMaintenanceMode, maintenanceMessage } = useMaintenance();
 
-  const form = useForm({
-    resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      email: "",
-      name: "",
-      password: "",
-    },
-  });
-
-  function onSubmit(data: z.infer<typeof signUpSchema>) {
+  async function onSubmit(data: any) {
     // Check maintenance mode before attempting signup
     if (isMaintenanceMode) {
       toast.error("Platform is currently under maintenance. Please try again later.");

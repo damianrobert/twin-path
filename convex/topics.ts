@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import { authComponent } from "./auth";
+import { ServerValidator, RateLimiter } from "./validation";
 
 // Simple server-side content validation
 const INAPPROPRIATE_WORDS = [
@@ -59,32 +60,31 @@ export const createTopic = mutation({
       throw new ConvexError("Not authenticated");
     }
 
-    // Server-side content validation
-    if (containsInappropriateContent(args.name)) {
+    // Rate limiting: 5 topics per hour per user
+    const rateLimitKey = `create_topic:${user._id}`;
+    if (!RateLimiter.checkRateLimit(rateLimitKey, 5, 60 * 60 * 1000)) {
+      throw new ConvexError("Too many topics created. Please try again later.");
+    }
+
+    // Server-side validation and sanitization
+    const sanitizedName = ServerValidator.validateText(args.name, "topic name", 2, 50);
+    const sanitizedDescription = args.description 
+      ? ServerValidator.validateText(args.description, "topic description", 0, 200)
+      : undefined;
+
+    // Content validation (keep existing word filter as additional layer)
+    if (containsInappropriateContent(sanitizedName)) {
       throw new ConvexError("Topic name contains inappropriate content. Please keep it professional.");
     }
 
-    if (args.description && containsInappropriateContent(args.description)) {
+    if (sanitizedDescription && containsInappropriateContent(sanitizedDescription)) {
       throw new ConvexError("Topic description contains inappropriate content. Please keep it professional.");
-    }
-
-    // Length validation
-    if (args.name.length < 2) {
-      throw new ConvexError("Topic name must be at least 2 characters long.");
-    }
-
-    if (args.name.length > 50) {
-      throw new ConvexError("Topic name must be less than 50 characters long.");
-    }
-
-    if (args.description && args.description.length > 200) {
-      throw new ConvexError("Topic description must be less than 200 characters long.");
     }
 
     // Check if topic already exists
     const existingTopic = await ctx.db
       .query("topics")
-      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .withIndex("by_name", (q) => q.eq("name", sanitizedName))
       .first();
 
     if (existingTopic) {
@@ -92,8 +92,8 @@ export const createTopic = mutation({
     }
 
     const topicId = await ctx.db.insert("topics", {
-      name: args.name,
-      description: args.description,
+      name: sanitizedName,
+      description: sanitizedDescription,
     });
 
     return topicId;
