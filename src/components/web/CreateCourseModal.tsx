@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
-import { Loader2, Plus, X, Upload, FileText, Video } from "lucide-react";
+import { Loader2, Plus, X, Upload, FileText, Video, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { contentSchemas } from "@/lib/validation";
+import { validateTopicContentAI } from "@/lib/ai-content-filter";
 
 const courseSchema = contentSchemas.course;
 
@@ -30,6 +31,9 @@ interface CreateCourseModalProps {
 export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAnalyzingContent, setIsAnalyzingContent] = useState(false);
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [rejectionIssues, setRejectionIssues] = useState<string[]>([]);
   const [prerequisiteInput, setPrerequisiteInput] = useState("");
   const [objectiveInput, setObjectiveInput] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
@@ -59,10 +63,96 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
   const watchedPrerequisites = watch("prerequisites") || [];
   const watchedObjectives = watch("learningObjectives") || [];
 
+  // AI-powered content validation for courses
+  const validateCourseContent = async (data: CourseFormData) => {
+    const issues: string[] = [];
+
+    // Validate course title
+    const titleValidation = await validateTopicContentAI(data.title.trim());
+    if (!titleValidation.isValid) {
+      issues.push(`Course title ${titleValidation.error || 'contains inappropriate content'}`);
+    }
+
+    // Validate course description
+    const descValidation = await validateTopicContentAI(data.description.trim());
+    if (!descValidation.isValid) {
+      issues.push(`Course description ${descValidation.error || 'contains inappropriate content'}`);
+    }
+
+    // Validate prerequisites
+    for (const prereq of data.prerequisites || []) {
+      const prereqValidation = await validateTopicContentAI(prereq.trim());
+      if (!prereqValidation.isValid) {
+        issues.push(`Prerequisite "${prereq}" ${prereqValidation.error || 'contains inappropriate content'}`);
+      }
+    }
+
+    // Validate learning objectives
+    for (const objective of data.learningObjectives || []) {
+      const objValidation = await validateTopicContentAI(objective.trim());
+      if (!objValidation.isValid) {
+        issues.push(`Learning objective "${objective}" ${objValidation.error || 'contains inappropriate content'}`);
+      }
+    }
+
+    return issues;
+  };
+
+  // AI-powered content validation for modules
+  const validateModuleContent = async (modules: Array<{ title: string; description: string }>) => {
+    const issues: string[] = [];
+    console.log('validateModuleContent called with modules:', modules);
+
+    for (const module of modules) {
+      if (!module.title.trim()) continue;
+      
+      console.log('Validating module:', module.title);
+
+      // Validate module title
+      const titleValidation = await validateTopicContentAI(module.title.trim());
+      console.log('Title validation result:', titleValidation);
+      
+      if (!titleValidation.isValid) {
+        issues.push(`Module title "${module.title}" ${titleValidation.error || 'contains inappropriate content'}`);
+      }
+
+      // Validate module description if provided
+      if (module.description.trim()) {
+        console.log('Validating description:', module.description);
+        const descValidation = await validateTopicContentAI(module.description.trim());
+        console.log('Description validation result:', descValidation);
+        
+        if (!descValidation.isValid) {
+          issues.push(`Module description "${module.description}" ${descValidation.error || 'contains inappropriate content'}`);
+        }
+      }
+    }
+
+    console.log('Final issues array:', issues);
+    return issues;
+  };
+
   const onSubmit = async (data: CourseFormData) => {
     if (currentStep === 1) {
       setIsSubmitting(true);
       try {
+        setIsAnalyzingContent(true);
+        toast.loading("Please wait while AI checks your content...", { id: "content-analysis" });
+        
+        // AI-powered content validation
+        const issues = await validateCourseContent(data);
+        
+        toast.dismiss("content-analysis");
+        setIsAnalyzingContent(false);
+        
+        if (issues.length > 0) {
+          setRejectionIssues(issues);
+          setRejectionModalOpen(true);
+          setIsSubmitting(false);
+          return;
+        }
+
+        console.log('Attempting to create course...');
         const courseId = await createCourse({
           title: data.title,
           description: data.description,
@@ -72,16 +162,40 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
           prerequisites: data.prerequisites,
           learningObjectives: data.learningObjectives,
         });
+        console.log('Course created with ID:', courseId);
 
         setCreatedCourseId(courseId);
         setCurrentStep(2);
         toast.success("Course created! Now add your modules.");
       } catch (error) {
+        toast.dismiss("content-analysis");
+        setIsAnalyzingContent(false);
+        console.error('Error creating course:', error);
         toast.error(error instanceof Error ? error.message : "Failed to create course");
       } finally {
         setIsSubmitting(false);
       }
     }
+  };
+
+  const debugSubmit = (data: any) => {
+    console.log('Form submitted successfully, calling onSubmit...');
+    onSubmit(data);
+  };
+
+  const handleFormSubmit = () => {
+    console.log('handleFormSubmit called');
+    console.log('Form errors:', errors);
+    console.log('Form values:', watch());
+    
+    // Force form validation and submission
+    handleSubmit((data) => {
+      console.log('handleSubmit callback triggered with data:', data);
+      onSubmit(data);
+    }, (errors) => {
+      console.log('Form validation errors:', errors);
+      toast.error('Please fill in all required fields correctly');
+    })();
   };
 
   const addModule = () => {
@@ -92,10 +206,45 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
     }]);
   };
 
-  const updateModule = (index: number, field: string, value: any) => {
+  const updateModule = async (index: number, field: string, value: any) => {
     const updatedModules = [...modules];
     updatedModules[index] = { ...updatedModules[index], [field]: value };
     setModules(updatedModules);
+    
+    // Real-time AI validation for module content
+    if (field === 'title' || field === 'description') {
+      const module = updatedModules[index];
+      if (module.title.trim() || module.description.trim()) {
+        const issues = await validateSingleModule(module, index);
+        if (issues.length > 0) {
+          // Show validation error for this specific module
+          toast.error(issues[0]); // Show first issue
+        }
+      }
+    }
+  };
+
+  // Validate a single module
+  const validateSingleModule = async (module: { title: string; description: string }, index: number) => {
+    const issues: string[] = [];
+
+    // Validate module title
+    if (module.title.trim()) {
+      const titleValidation = await validateTopicContentAI(module.title.trim());
+      if (!titleValidation.isValid) {
+        issues.push(`Module ${index + 1} title ${titleValidation.error || 'contains inappropriate content'}`);
+      }
+    }
+
+    // Validate module description if provided
+    if (module.description.trim()) {
+      const descValidation = await validateTopicContentAI(module.description.trim());
+      if (!descValidation.isValid) {
+        issues.push(`Module ${index + 1} description ${descValidation.error || 'contains inappropriate content'}`);
+      }
+    }
+
+    return issues;
   };
 
   const removeModule = (index: number) => {
@@ -103,18 +252,50 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
   };
 
   const finishCourseCreation = async () => {
-    if (!createdCourseId) return;
+    console.log('finishCourseCreation called');
+    console.log('modules:', modules);
     
+    // Simple test to make sure button click works
+    toast("Button clicked! Checking modules...");
+    
+    if (!createdCourseId) {
+      console.log('No createdCourseId, returning');
+      return;
+    }
+    
+    console.log('createdCourseId exists:', createdCourseId);
     setIsSubmitting(true);
     try {
-      // Import the API functions directly
-      const { createModule, generateCourseUploadUrl, storeCourseUploadedFile, uploadModuleVideo, uploadModuleFile } = api.courseModules;
+      setIsAnalyzingContent(true);
+      toast.loading("Please wait while AI checks your module content...", { id: "module-analysis" });
+      
+      console.log('Starting AI validation for modules...');
+      // AI-powered content validation for modules
+      const moduleIssues = await validateModuleContent(modules);
+      console.log('Module validation results:', moduleIssues);
+      
+      toast.dismiss("module-analysis");
+      setIsAnalyzingContent(false);
+      
+      if (moduleIssues.length > 0) {
+        console.log('Module issues found:', moduleIssues);
+        setRejectionIssues(moduleIssues);
+        setRejectionModalOpen(true);
+        setIsSubmitting(false);
+        return;
+      }
+      // Use useMutation hooks for Convex mutations
+      const createModuleMutation = useMutation(api.courseModules.createModule);
+      const generateCourseUploadUrlMutation = useMutation(api.courseModules.generateCourseUploadUrl);
+      const storeCourseUploadedFileMutation = useMutation(api.courseModules.storeCourseUploadedFile);
+      const uploadModuleVideoMutation = useMutation(api.courseModules.uploadModuleVideo);
+      const uploadModuleFileMutation = useMutation(api.courseModules.uploadModuleFile);
 
       for (const module of modules) {
         if (!module.title.trim()) continue;
 
         // Create module
-        const moduleId = await createModule({
+        const moduleId = await createModuleMutation({
           courseId: createdCourseId,
           title: module.title,
           description: module.description,
@@ -123,7 +304,7 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
 
         // Upload video if provided
         if (module.videoFile) {
-          const uploadUrl = await generateCourseUploadUrl();
+          const uploadUrl = await generateCourseUploadUrlMutation();
           const response = await fetch(uploadUrl, {
             method: "POST",
             headers: { "Content-Type": module.videoFile.type },
@@ -132,20 +313,23 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
           
           if (response.ok) {
             const { storageId } = await response.json();
-            const fileUrl = await storeCourseUploadedFile({ storageId });
-            await uploadModuleVideo({
-              moduleId,
-              videoUrl: fileUrl,
-              videoName: module.videoFile.name,
-              videoSize: module.videoFile.size,
-              videoType: module.videoFile.type,
-            });
+            const fileUrl = await storeCourseUploadedFileMutation({ storageId });
+            
+            if (fileUrl) {
+              await uploadModuleVideoMutation({
+                moduleId,
+                videoUrl: fileUrl,
+                videoName: module.videoFile.name,
+                videoSize: module.videoFile.size,
+                videoType: module.videoFile.type,
+              });
+            }
           }
         }
 
         // Upload document if provided
         if (module.documentFile) {
-          const uploadUrl = await generateCourseUploadUrl();
+          const uploadUrl = await generateCourseUploadUrlMutation();
           const response = await fetch(uploadUrl, {
             method: "POST",
             headers: { "Content-Type": module.documentFile.type },
@@ -154,14 +338,19 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
           
           if (response.ok) {
             const { storageId } = await response.json();
-            const fileUrl = await storeCourseUploadedFile({ storageId });
-            await uploadModuleFile({
-              moduleId,
-              fileUrl,
-              fileName: module.documentFile.name,
-              fileSize: module.documentFile.size,
-              fileType: module.documentFile.type,
-            });
+            const fileUrl = await storeCourseUploadedFileMutation({ storageId });
+            
+            if (fileUrl) {
+              await uploadModuleFileMutation({
+                moduleId,
+                fileUrl,
+                fileName: module.documentFile.name,
+                fileSize: module.documentFile.size,
+                fileType: module.documentFile.type,
+              });
+            } else {
+              console.error("Failed to get file URL from storage");
+            }
           }
         }
       }
@@ -171,6 +360,8 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
       setIsOpen(false);
       onSuccess?.();
     } catch (error) {
+      toast.dismiss("module-analysis");
+      setIsAnalyzingContent(false);
       toast.error(error instanceof Error ? error.message : "Failed to create modules");
     } finally {
       setIsSubmitting(false);
@@ -217,7 +408,7 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
         </DialogHeader>
 
         {currentStep === 1 ? (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(debugSubmit)} className="space-y-6">
             {/* Step 1: Basic Course Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basic Information</h3>
@@ -363,8 +554,13 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button type="button" onClick={handleFormSubmit} disabled={isSubmitting || isAnalyzingContent}>
+                {isAnalyzingContent ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Analyzing Content...
+                  </>
+                ) : isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Creating...
@@ -481,9 +677,14 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
                 </Button>
                 <Button 
                   onClick={finishCourseCreation} 
-                  disabled={isSubmitting || modules.length === 0}
+                  disabled={isSubmitting || isAnalyzingContent || modules.length === 0}
                 >
-                  {isSubmitting ? (
+                  {isAnalyzingContent ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      Analyzing Content...
+                    </>
+                  ) : isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       Creating...
@@ -497,6 +698,60 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
           </div>
         )}
       </DialogContent>
+
+      {/* Content Rejection Modal */}
+      <Dialog open={rejectionModalOpen} onOpenChange={setRejectionModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Content Not Approved
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Your course could not be created due to the following content issues:
+            </p>
+            {rejectionIssues.map((issue, index) => (
+              <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded-lg">
+                <X className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                <span className="text-sm">{issue}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Please review and revise your content:</strong>
+            </p>
+            <ul className="text-xs text-blue-700 mt-1 space-y-1">
+              <li>• Ensure your title is professional and meaningful</li>
+              <li>• Provide substantial course description</li>
+              <li>• Use professional language and avoid inappropriate words</li>
+              <li>• Make sure prerequisites are relevant and appropriate</li>
+              <li>• Keep learning objectives professional and clear</li>
+              <li>• Module titles and descriptions should be professional</li>
+            </ul>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+            <p className="text-xs text-amber-800">
+              <strong>Note:</strong> Content moderation is performed by AI and may occasionally make errors. 
+              If you believe your content was incorrectly flagged, please contact our support team for review.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button 
+              onClick={() => setRejectionModalOpen(false)}
+              className="flex-1"
+            >
+              I'll Fix It
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

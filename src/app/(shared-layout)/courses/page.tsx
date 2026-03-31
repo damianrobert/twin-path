@@ -21,6 +21,7 @@ export default function CoursesPage() {
   const topics = useQuery(api.topics.getAllTopics) || [];
   const enrollInCourse = useMutation(api.courses.enrollInCourse);
   const userEnrollments = useQuery(api.courses.getUserEnrollments) || [];
+  const currentUser = useQuery(api.users.getCurrentProfile);
 
   const enrolledCourseIds = new Set(userEnrollments.map((e: any) => e.courseId));
 
@@ -128,6 +129,7 @@ export default function CoursesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((course: any) => {
             const isEnrolled = enrolledCourseIds.has(course._id);
+            const isInstructor = currentUser && course.instructorId === currentUser._id;
             
             return (
               <Card key={course._id} className="hover:shadow-lg transition-shadow">
@@ -212,7 +214,17 @@ export default function CoursesPage() {
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
-                      {isEnrolled ? (
+                      {isInstructor ? (
+                        <div className="w-full text-center p-3 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground">
+                            <BookOpen className="h-4 w-4 inline mr-1" />
+                            Your Course
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            You cannot enroll in your own course
+                          </p>
+                        </div>
+                      ) : isEnrolled ? (
                         <Link href={`/courses/${course._id}`} className="flex-1">
                           <Button className="w-full">
                             <BookOpen className="h-4 w-4 mr-2" />

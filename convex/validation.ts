@@ -294,7 +294,5 @@ export class RateLimiter {
   }
 }
 
-// Cleanup rate limiter periodically
-if (typeof setInterval !== "undefined") {
-  setInterval(() => RateLimiter.cleanup(), 5 * 60 * 1000); // Every 5 minutes
-}
+// Note: Cleanup should be handled by Convex's built-in memory management
+// For production, consider using Redis or external rate limiting service

@@ -225,8 +225,8 @@ export const contentSchemas = {
     topicId: z.string().min(1, "Topic is required"),
     difficulty: z.enum(["beginner", "intermediate", "advanced"]),
     estimatedDuration: z.number().min(1).optional(),
-    prerequisites: z.array(commonSchemas.description).optional(),
-    learningObjectives: z.array(commonSchemas.description).optional(),
+    prerequisites: z.array(z.string().min(1, "Prerequisite cannot be empty").max(100, "Prerequisite cannot exceed 100 characters")).optional(),
+    learningObjectives: z.array(z.string().min(1, "Learning objective cannot be empty").max(200, "Learning objective cannot exceed 200 characters")).optional(),
     thumbnail: commonSchemas.url.optional().or(z.literal("")),
   }),
 

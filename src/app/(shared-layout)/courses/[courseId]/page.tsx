@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, BookOpen, Users, Clock, Play, FileText, CheckCircle, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "../../../../../convex/_generated/dataModel";
+import { ClientOnly } from "@/components/ui/client-only";
 
 export default function CoursePage({ params }: { params: Promise<{ courseId: string }> }) {
   const resolvedParams = use(params);
@@ -22,7 +23,9 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
   if (course === undefined) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <ClientOnly fallback={<div className="h-8 w-8 animate-pulse bg-muted rounded-full" />}>
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </ClientOnly>
       </div>
     );
   }
@@ -32,7 +35,9 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
       <div className="container mx-auto py-8">
         <Card>
           <CardContent className="p-12 text-center">
-            <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <ClientOnly fallback={<div className="h-16 w-16 mx-auto bg-muted rounded-lg mb-4" />}>
+              <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            </ClientOnly>
             <h3 className="text-xl font-semibold mb-2">Course not found</h3>
             <p className="text-muted-foreground">
               This course may not exist or you may not have access to it.
