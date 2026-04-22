@@ -1,55 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import MentorProfileModal from "@/components/web/MentorProfileModal";
 import MentorshipRequestModal from "@/components/web/MentorshipRequestModal";
-import { 
-  Search, 
-  Filter, 
-  MapPin, 
-  Briefcase, 
-  Star, 
-  MessageCircle, 
+import {
+  Search,
+  Filter,
+  Briefcase,
+  MessageCircle,
   User,
   Clock,
-  Award,
-  X
+  X,
+  Users,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import GlobalAvatar from "@/components/web/GlobalAvatar";
-
-// Helper functions for avatar
-const generateColorFromString = (str: string) => {
-  const colors = [
-    "bg-red-500", "bg-blue-500", "bg-green-500", "bg-yellow-500", "bg-purple-500",
-    "bg-pink-500", "bg-indigo-500", "bg-teal-500", "bg-orange-500", "bg-cyan-500",
-    "bg-emerald-500", "bg-rose-500", "bg-violet-500", "bg-amber-500", "bg-lime-500", "bg-sky-500"
-  ];
-  
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
-};
-
-const getInitials = (name: string) => {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  } else if (parts.length === 1 && parts[0].length > 0) {
-    return parts[0].substring(0, 2).toUpperCase();
-  }
-  return "?";
-};
 
 interface Mentor {
   _id: Id<"users">;
@@ -64,126 +34,93 @@ interface Mentor {
   teachingExperience?: string;
   availability?: string;
   topics?: Array<{
-    topic: {
-      _id: Id<"topics">;
-      name: string;
-      description?: string;
-    };
+    topic: { _id: Id<"topics">; name: string; description?: string };
     type: "expertise" | "interest";
     skillLevel?: string;
   }>;
 }
 
+const experienceRanges = [
+  { label: "0-2 yrs", value: "0-2" },
+  { label: "3-5 yrs", value: "3-5" },
+  { label: "6-10 yrs", value: "6-10" },
+  { label: "10+ yrs", value: "10+" },
+];
+
+const availabilityOptions = ["Weekdays", "Weekends", "Evenings", "Flexible"];
+
 const MentorsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [experienceFilter, setExperienceFilter] = useState<string>("");
-  const [availabilityFilter, setAvailabilityFilter] = useState<string>("");
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const [selectedMentorForRequest, setSelectedMentorForRequest] = useState<Mentor | null>(null);
+  const [experienceFilter, setExperienceFilter] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedMentorForRequest, setSelectedMentorForRequest] = useState<Mentor | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
-  // Get current user to filter them out
   const { isAuthenticated } = useConvexAuth();
   const currentUser = useQuery(api.users.getCurrentProfile);
-
-  // Fetch real mentors from database
   const mentors = useQuery(api.users.getMentors);
   const allTopicsQuery = useQuery(api.topics.getAllTopics);
   const allUserTopics = useQuery(api.users.getAllUserTopics) || [];
   const userMentorships = useQuery(api.mentorships.getUserMentorships);
 
-  // Create a map of userId to topics for efficient lookup
   const userTopicsMap = React.useMemo(() => {
-    const map = new Map();
-    allUserTopics.forEach(userTopic => {
-      if (!map.has(userTopic.userId)) {
-        map.set(userTopic.userId, []);
-      }
-      map.get(userTopic.userId).push(userTopic);
+    const map = new Map<string, any[]>();
+    allUserTopics.forEach((ut) => {
+      if (!map.has(ut.userId)) map.set(ut.userId, []);
+      map.get(ut.userId)!.push(ut);
     });
     return map;
   }, [allUserTopics]);
 
-  // Combine mentors with their topics and filter out current user and mentors with active mentorships
   const mentorsWithTopics = React.useMemo(() => {
     if (!mentors) return [];
-    
-    // Get IDs of mentors with whom user has active mentorships
     const activeMentorIds = userMentorships
-      ? userMentorships
-          .filter(m => m.status === "active")
-          .map(m => m.mentorId)
+      ? userMentorships.filter((m) => m.status === "active").map((m) => m.mentorId)
       : [];
-    
     return mentors
-      .filter(mentor => {
-        // Filter out current user if they're a mentor
-        if (currentUser && mentor._id === currentUser._id) return false;
-        
-        // Filter out mentors with whom user already has active mentorships
-        if (activeMentorIds.includes(mentor._id)) return false;
-        
+      .filter((m) => {
+        if (currentUser && m._id === currentUser._id) return false;
+        if (activeMentorIds.includes(m._id)) return false;
         return true;
       })
-      .map(mentor => ({
-        ...mentor,
-        topics: userTopicsMap.get(mentor._id) || []
-      }));
+      .map((m) => ({ ...m, topics: userTopicsMap.get(m._id) || [] }));
   }, [mentors, userTopicsMap, currentUser, userMentorships]);
 
-  // Create a combined list of all topics from mentors
-  const allTopics = React.useMemo(() => {
-    return Array.from(new Set(
-      mentorsWithTopics.flatMap(mentor => mentor.topics?.map((userTopic: any) => userTopic.topic) || [])
-    ));
-  }, [mentorsWithTopics]);
-
-  // Filter mentors based on search and filters
   const filteredMentors = React.useMemo(() => {
-    return mentorsWithTopics.filter(mentor => {
-      const matchesSearch = mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           mentor.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           mentor.topics?.some((userTopic: any) => 
-                             userTopic.topic?.name.toLowerCase().includes(searchTerm.toLowerCase())
-                           );
+    return mentorsWithTopics.filter((mentor) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        !q ||
+        mentor.name.toLowerCase().includes(q) ||
+        mentor.bio?.toLowerCase().includes(q) ||
+        mentor.topics?.some((ut: any) => ut.topic?.name.toLowerCase().includes(q));
 
-      const matchesTopics = selectedTopics.length === 0 ||
-                           mentor.topics?.some((userTopic: any) => 
-                             selectedTopics.includes(userTopic.topic?._id)
-                           );
+      const matchesTopics =
+        selectedTopics.length === 0 ||
+        mentor.topics?.some((ut: any) => selectedTopics.includes(ut.topic?._id));
 
-      const matchesExperience = !experienceFilter ||
-                           (experienceFilter === "0-2" && mentor.yearsOfExperience! <= 2) ||
-                           (experienceFilter === "3-5" && mentor.yearsOfExperience! >= 3 && mentor.yearsOfExperience! <= 5) ||
-                           (experienceFilter === "6-10" && mentor.yearsOfExperience! >= 6 && mentor.yearsOfExperience! <= 10) ||
-                           (experienceFilter === "10+" && mentor.yearsOfExperience! > 10);
+      const yoe = mentor.yearsOfExperience;
+      const matchesExperience =
+        !experienceFilter ||
+        (experienceFilter === "0-2" && yoe != null && yoe <= 2) ||
+        (experienceFilter === "3-5" && yoe != null && yoe >= 3 && yoe <= 5) ||
+        (experienceFilter === "6-10" && yoe != null && yoe >= 6 && yoe <= 10) ||
+        (experienceFilter === "10+" && yoe != null && yoe > 10);
 
-      const matchesAvailability = !availabilityFilter ||
-                           mentor.availability?.toLowerCase().includes(availabilityFilter.toLowerCase());
+      const matchesAvailability =
+        !availabilityFilter ||
+        mentor.availability?.toLowerCase().includes(availabilityFilter.toLowerCase());
 
       return matchesSearch && matchesTopics && matchesExperience && matchesAvailability;
     });
   }, [mentorsWithTopics, searchTerm, selectedTopics, experienceFilter, availabilityFilter]);
 
-  // Show loading state while fetching data
-  if (mentors === undefined || allTopicsQuery === undefined) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="size-8 animate-spin" />
-      </div>
-    );
-  }
-
-  const handleTopicToggle = (topicId: string) => {
-    setSelectedTopics(prev => 
-      prev.includes(topicId) 
-        ? prev.filter(id => id !== topicId)
-        : [...prev, topicId]
-    );
-  };
+  const activeFilterCount =
+    selectedTopics.length + (experienceFilter ? 1 : 0) + (availabilityFilter ? 1 : 0);
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -192,269 +129,327 @@ const MentorsPage = () => {
     setAvailabilityFilter("");
   };
 
-  const handleConnectMentor = (mentor: Mentor) => {
-    setSelectedMentorForRequest(mentor);
-    setIsRequestModalOpen(true);
-  };
-
-  const handleCloseRequestModal = () => {
-    setIsRequestModalOpen(false);
-    setSelectedMentorForRequest(null);
-  };
-
-  const handleViewProfile = (mentor: Mentor) => {
-    setSelectedMentor(mentor);
-    setIsProfileModalOpen(true);
-  };
-
-  const handleCloseProfileModal = () => {
-    setIsProfileModalOpen(false);
-    setSelectedMentor(null);
-  };
+  if (mentors === undefined || allTopicsQuery === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="size-8 animate-spin text-white/30" />
+      </div>
+    );
+  }
 
   return (
-    <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">
-          Find Your Perfect Mentor
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Connect with experienced professionals who can guide you through your career journey
-        </p>
+    <div className="relative min-h-screen">
+      {/* Ambient */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.07),transparent_70%)]" />
       </div>
 
-      {/* Search and Filters */}
-      <div className="mb-8 space-y-4">
-        {/* Search Bar */}
-        <div className="relative max-w-2xl mx-auto">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search mentors by name, expertise, or bio..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-12 text-lg"
-          />
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <p className="text-white/35 text-xs font-semibold uppercase tracking-widest mb-3">
+            Mentors
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">
+            Find Your Perfect{" "}
+            <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
+              Mentor Match
+            </span>
+          </h1>
+          <p className="text-white/40 text-lg max-w-2xl mx-auto">
+            Connect with experienced professionals who can guide you through your career journey.
+          </p>
         </div>
 
-        {/* Filter Toggle */}
-        <div className="flex justify-center">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
-            {(selectedTopics.length > 0 || experienceFilter || availabilityFilter) && (
-              <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground ml-1">
-                {selectedTopics.length + (experienceFilter ? 1 : 0) + (availabilityFilter ? 1 : 0)}
-              </div>
+        {/* Search + filter bar */}
+        <div className="max-w-3xl mx-auto mb-8 space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by name, expertise, or bio…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-12 pl-11 pr-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/10 transition-colors"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
             )}
-          </Button>
-          {(selectedTopics.length > 0 || experienceFilter || availabilityFilter) && (
-            <Button variant="ghost" onClick={clearFilters} className="ml-2">
-              <X className="h-4 w-4 mr-1" />
-              Clear
-            </Button>
+          </div>
+
+          {/* Filter row */}
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm border transition-colors ${
+                showFilters
+                  ? "bg-violet-500/20 border-violet-500/40 text-violet-300"
+                  : "bg-white/5 border-white/10 text-white/55 hover:text-white hover:bg-white/8"
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="bg-violet-500/30 border border-violet-500/40 text-violet-300 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-white/35 hover:text-white/70 hover:bg-white/5 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear all
+              </button>
+            )}
+          </div>
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Topics */}
+              <div>
+                <p className="text-xs text-white/35 uppercase tracking-widest mb-3 font-semibold">
+                  Expertise Areas
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {allTopicsQuery.map((topic) => {
+                    const active = selectedTopics.includes(topic._id);
+                    return (
+                      <button
+                        key={topic._id}
+                        onClick={() =>
+                          setSelectedTopics((prev) =>
+                            active ? prev.filter((id) => id !== topic._id) : [...prev, topic._id]
+                          )
+                        }
+                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                          active
+                            ? "bg-violet-500/25 border-violet-500/40 text-violet-300"
+                            : "bg-white/5 border-white/10 text-white/45 hover:border-white/20 hover:text-white/70"
+                        }`}
+                      >
+                        {topic.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Experience */}
+              <div>
+                <p className="text-xs text-white/35 uppercase tracking-widest mb-3 font-semibold">
+                  Experience
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {experienceRanges.map(({ label, value }) => {
+                    const active = experienceFilter === value;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => setExperienceFilter(active ? "" : value)}
+                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                          active
+                            ? "bg-blue-500/25 border-blue-500/40 text-blue-300"
+                            : "bg-white/5 border-white/10 text-white/45 hover:border-white/20 hover:text-white/70"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Availability */}
+              <div>
+                <p className="text-xs text-white/35 uppercase tracking-widest mb-3 font-semibold">
+                  Availability
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {availabilityOptions.map((opt) => {
+                    const val = opt.toLowerCase();
+                    const active = availabilityFilter === val;
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => setAvailabilityFilter(active ? "" : val)}
+                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                          active
+                            ? "bg-emerald-500/25 border-emerald-500/40 text-emerald-300"
+                            : "bg-white/5 border-white/10 text-white/45 hover:border-white/20 hover:text-white/70"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Filters Panel */}
-        {showFilters && (
-          <Card className="max-w-4xl mx-auto">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Topics Filter */}
-                <div>
-                  <h3 className="font-semibold mb-3">Expertise Areas</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {allTopicsQuery.map(topic => (
-                      <div
-                        key={topic._id}
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-colors ${
-                          selectedTopics.includes(topic._id) 
-                            ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/80" 
-                            : "text-foreground border-border hover:bg-primary/10"
-                        }`}
-                        onClick={() => handleTopicToggle(topic._id)}
-                      >
-                        {topic.name}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {/* Results count */}
+        <p className="text-center text-white/35 text-sm mb-8">
+          <span className="text-white font-semibold">{filteredMentors.length}</span>{" "}
+          mentor{filteredMentors.length !== 1 ? "s" : ""} found
+        </p>
 
-                {/* Experience Filter */}
-                <div>
-                  <h3 className="font-semibold mb-3">Years of Experience</h3>
-                  <div className="space-y-2">
-                    {["0-2", "3-5", "6-10", "10+"].map(range => (
-                      <label key={range} className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="experience"
-                          value={range}
-                          checked={experienceFilter === range}
-                          onChange={(e) => setExperienceFilter(e.target.value)}
-                          className="text-primary"
-                        />
-                        <span className="text-sm">{range} years</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Availability Filter */}
-                <div>
-                  <h3 className="font-semibold mb-3">Availability</h3>
-                  <div className="space-y-2">
-                    {["Weekdays", "Weekends", "Evenings", "Flexible"].map(availability => (
-                      <label key={availability} className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="availability"
-                          value={availability.toLowerCase()}
-                          checked={availabilityFilter === availability.toLowerCase()}
-                          onChange={(e) => setAvailabilityFilter(e.target.value)}
-                          className="text-primary"
-                        />
-                        <span className="text-sm">{availability}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Mentor grid */}
+        {filteredMentors.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredMentors.map((mentor) => (
+              <MentorCard
+                key={mentor._id}
+                mentor={mentor}
+                isAuthenticated={isAuthenticated}
+                onConnect={() => {
+                  setSelectedMentorForRequest(mentor);
+                  setIsRequestModalOpen(true);
+                }}
+                onViewProfile={() => {
+                  setSelectedMentor(mentor);
+                  setIsProfileModalOpen(true);
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center text-center py-20">
+            <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-6">
+              <Users className="h-7 w-7 text-white/20" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">No mentors found</h3>
+            <p className="text-white/35 text-sm max-w-sm mb-6">
+              Try adjusting your search terms or filters to find more mentors.
+            </p>
+            <button
+              onClick={clearFilters}
+              className="px-5 py-2 rounded-xl text-sm bg-white/8 border border-white/10 text-white/60 hover:text-white hover:bg-white/12 transition-colors"
+            >
+              Clear all filters
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Results Count */}
-      <div className="mb-6 text-center">
-        <p className="text-muted-foreground">
-          Found <span className="font-semibold text-foreground">{filteredMentors.length}</span> mentor{filteredMentors.length !== 1 ? 's' : ''}
-        </p>
-      </div>
-
-      {/* Mentors Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredMentors.map(mentor => (
-          <Card key={mentor._id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-start space-x-4">
-                <GlobalAvatar 
-                  user={{
-                    name: mentor.name,
-                    role: mentor.role
-                  }}
-                  size="lg"
-                  clickable={false}
-                />
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg">{mentor.name}</CardTitle>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Briefcase className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {mentor.yearsOfExperience} years experience
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {mentor.availability}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                {mentor.bio}
-              </p>
-
-              {/* Expertise Areas */}
-              <div className="mb-4">
-                <h4 className="font-semibold text-sm mb-2">Expertise Areas</h4>
-                <div className="flex flex-wrap gap-1">
-                  {mentor.topics?.slice(0, 3).map((topic: any, index: number) => (
-                    <div key={`${mentor._id}-${topic.topic._id}-${index}`} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
-                      {topic.topic.name}
-                    </div>
-                  ))}
-                  {mentor.topics && mentor.topics.length > 3 && (
-                    <div key={`${mentor._id}-more-topics`} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold text-foreground border-border">
-                      +{mentor.topics.length - 3} more
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Professional Background */}
-              {mentor.professionalExperience && (
-                <div className="mb-4">
-                  <h4 className="font-semibold text-sm mb-1">Background</h4>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {mentor.professionalExperience}
-                  </p>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => handleConnectMentor(mentor)}
-                >
-                  <MessageCircle className="h-3 w-3 mr-1" />
-                  Connect
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleViewProfile(mentor)}
-                >
-                  <User className="h-3 w-3 mr-1" />
-                  Profile
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* No Results */}
-      {filteredMentors.length === 0 && (
-        <div className="text-center py-12">
-          <div className="max-w-md mx-auto">
-            <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No mentors found</h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your search terms or filters to find more mentors.
-            </p>
-            <Button onClick={clearFilters} variant="outline">
-              Clear all filters
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Mentor Profile Modal */}
       <MentorProfileModal
         mentor={selectedMentor}
         isOpen={isProfileModalOpen}
-        onClose={handleCloseProfileModal}
+        onClose={() => { setIsProfileModalOpen(false); setSelectedMentor(null); }}
       />
-
-      {/* Mentorship Request Modal */}
       <MentorshipRequestModal
         mentor={selectedMentorForRequest}
         isOpen={isRequestModalOpen}
-        onClose={handleCloseRequestModal}
+        onClose={() => { setIsRequestModalOpen(false); setSelectedMentorForRequest(null); }}
       />
     </div>
   );
 };
+
+/* ── Mentor card ── */
+function MentorCard({
+  mentor,
+  isAuthenticated,
+  onConnect,
+  onViewProfile,
+}: {
+  mentor: Mentor;
+  isAuthenticated: boolean;
+  onConnect: () => void;
+  onViewProfile: () => void;
+}) {
+  const visibleTopics = mentor.topics?.slice(0, 3) ?? [];
+  const extraTopics = (mentor.topics?.length ?? 0) - visibleTopics.length;
+
+  return (
+    <div className="group bg-white/[0.03] border border-white/10 rounded-3xl p-5 hover:border-white/20 hover:shadow-lg hover:shadow-black/20 transition-all duration-300 flex flex-col gap-4">
+      {/* Avatar + name */}
+      <div className="flex items-start gap-4">
+        <GlobalAvatar
+          user={{ name: mentor.name, role: mentor.role }}
+          size="lg"
+          clickable={false}
+        />
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-white text-base leading-tight">{mentor.name}</h3>
+          {mentor.yearsOfExperience != null && (
+            <p className="flex items-center gap-1.5 text-xs text-white/40 mt-1">
+              <Briefcase className="h-3 w-3" />
+              {mentor.yearsOfExperience} yr{mentor.yearsOfExperience !== 1 ? "s" : ""} experience
+            </p>
+          )}
+          {mentor.availability && (
+            <p className="flex items-center gap-1.5 text-xs text-white/40 mt-0.5">
+              <Clock className="h-3 w-3" />
+              {mentor.availability}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Bio */}
+      {mentor.bio && (
+        <p className="text-sm text-white/50 leading-relaxed line-clamp-3">{mentor.bio}</p>
+      )}
+
+      {/* Topics */}
+      {visibleTopics.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {visibleTopics.map((ut: any, i: number) => (
+            <span
+              key={`${mentor._id}-${ut.topic._id}-${i}`}
+              className="px-2.5 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs rounded-full"
+            >
+              {ut.topic.name}
+            </span>
+          ))}
+          {extraTopics > 0 && (
+            <span className="px-2.5 py-1 bg-white/5 border border-white/10 text-white/30 text-xs rounded-full">
+              +{extraTopics} more
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Background snippet */}
+      {mentor.professionalExperience && (
+        <p className="text-xs text-white/35 line-clamp-2 leading-relaxed">
+          {mentor.professionalExperience}
+        </p>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2 mt-auto pt-2">
+        {isAuthenticated && (
+          <button
+            onClick={onConnect}
+            className="flex-1 flex items-center justify-center gap-1.5 h-9 bg-white text-black hover:bg-white/90 text-sm font-semibold rounded-xl transition-colors"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            Connect
+          </button>
+        )}
+        <button
+          onClick={onViewProfile}
+          className="flex items-center justify-center gap-1.5 h-9 px-4 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-sm rounded-xl transition-colors"
+        >
+          <User className="h-3.5 w-3.5" />
+          Profile
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default MentorsPage;
