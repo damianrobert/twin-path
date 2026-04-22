@@ -4,29 +4,27 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
-import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Badge } from "../ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
-import { Loader2, Plus, X, Upload, FileText, Video, AlertCircle } from "lucide-react";
+import { Loader2, Plus, X, FileText, Video, AlertCircle, Presentation, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { contentSchemas } from "@/lib/validation";
 import { validateTopicContentAI } from "@/lib/ai-content-filter";
 
 const courseSchema = contentSchemas.course;
-
 type CourseFormData = z.infer<typeof courseSchema>;
 
 interface CreateCourseModalProps {
   children: React.ReactNode;
   onSuccess?: () => void;
 }
+
+const inputCls = "w-full bg-white/5 border border-white/10 text-white placeholder:text-white/25 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-pink-500/50 focus:ring-1 focus:ring-pink-500/20 transition-colors";
+const labelCls = "block text-white/55 text-xs font-medium mb-1.5";
+const sectionHeadingCls = "text-white/35 text-xs font-semibold uppercase tracking-widest mb-4";
 
 export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,188 +61,108 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
   const watchedPrerequisites = watch("prerequisites") || [];
   const watchedObjectives = watch("learningObjectives") || [];
 
-  // AI-powered content validation for courses
   const validateCourseContent = async (data: CourseFormData) => {
     const issues: string[] = [];
-
-    // Validate course title
     const titleValidation = await validateTopicContentAI(data.title.trim());
-    if (!titleValidation.isValid) {
-      issues.push(`Course title ${titleValidation.error || 'contains inappropriate content'}`);
-    }
-
-    // Validate course description
+    if (!titleValidation.isValid) issues.push(`Course title ${titleValidation.error || 'contains inappropriate content'}`);
     const descValidation = await validateTopicContentAI(data.description.trim());
-    if (!descValidation.isValid) {
-      issues.push(`Course description ${descValidation.error || 'contains inappropriate content'}`);
-    }
-
-    // Validate prerequisites
+    if (!descValidation.isValid) issues.push(`Course description ${descValidation.error || 'contains inappropriate content'}`);
     for (const prereq of data.prerequisites || []) {
-      const prereqValidation = await validateTopicContentAI(prereq.trim());
-      if (!prereqValidation.isValid) {
-        issues.push(`Prerequisite "${prereq}" ${prereqValidation.error || 'contains inappropriate content'}`);
-      }
+      const v = await validateTopicContentAI(prereq.trim());
+      if (!v.isValid) issues.push(`Prerequisite "${prereq}" ${v.error || 'contains inappropriate content'}`);
     }
-
-    // Validate learning objectives
-    for (const objective of data.learningObjectives || []) {
-      const objValidation = await validateTopicContentAI(objective.trim());
-      if (!objValidation.isValid) {
-        issues.push(`Learning objective "${objective}" ${objValidation.error || 'contains inappropriate content'}`);
-      }
+    for (const obj of data.learningObjectives || []) {
+      const v = await validateTopicContentAI(obj.trim());
+      if (!v.isValid) issues.push(`Learning objective "${obj}" ${v.error || 'contains inappropriate content'}`);
     }
-
     return issues;
   };
 
-  // AI-powered content validation for modules
-  const validateModuleContent = async (modules: Array<{ title: string; description: string }>) => {
+  const validateModuleContent = async (mods: Array<{ title: string; description: string }>) => {
     const issues: string[] = [];
-    console.log('validateModuleContent called with modules:', modules);
-
-    for (const module of modules) {
-      if (!module.title.trim()) continue;
-      
-      console.log('Validating module:', module.title);
-
-      // Validate module title
-      const titleValidation = await validateTopicContentAI(module.title.trim());
-      console.log('Title validation result:', titleValidation);
-      
-      if (!titleValidation.isValid) {
-        issues.push(`Module title "${module.title}" ${titleValidation.error || 'contains inappropriate content'}`);
-      }
-
-      // Validate module description if provided
-      if (module.description.trim()) {
-        console.log('Validating description:', module.description);
-        const descValidation = await validateTopicContentAI(module.description.trim());
-        console.log('Description validation result:', descValidation);
-        
-        if (!descValidation.isValid) {
-          issues.push(`Module description "${module.description}" ${descValidation.error || 'contains inappropriate content'}`);
-        }
+    for (const mod of mods) {
+      if (!mod.title.trim()) continue;
+      const titleV = await validateTopicContentAI(mod.title.trim());
+      if (!titleV.isValid) issues.push(`Module title "${mod.title}" ${titleV.error || 'contains inappropriate content'}`);
+      if (mod.description.trim()) {
+        const descV = await validateTopicContentAI(mod.description.trim());
+        if (!descV.isValid) issues.push(`Module description "${mod.description}" ${descV.error || 'contains inappropriate content'}`);
       }
     }
+    return issues;
+  };
 
-    console.log('Final issues array:', issues);
+  const validateSingleModule = async (mod: { title: string; description: string }, index: number) => {
+    const issues: string[] = [];
+    if (mod.title.trim()) {
+      const v = await validateTopicContentAI(mod.title.trim());
+      if (!v.isValid) issues.push(`Module ${index + 1} title ${v.error || 'contains inappropriate content'}`);
+    }
+    if (mod.description.trim()) {
+      const v = await validateTopicContentAI(mod.description.trim());
+      if (!v.isValid) issues.push(`Module ${index + 1} description ${v.error || 'contains inappropriate content'}`);
+    }
     return issues;
   };
 
   const onSubmit = async (data: CourseFormData) => {
-    if (currentStep === 1) {
-      setIsSubmitting(true);
-      try {
-        setIsAnalyzingContent(true);
-        toast.loading("Please wait while AI checks your content...", { id: "content-analysis" });
-        
-        // AI-powered content validation
-        const issues = await validateCourseContent(data);
-        
-        toast.dismiss("content-analysis");
-        setIsAnalyzingContent(false);
-        
-        if (issues.length > 0) {
-          setRejectionIssues(issues);
-          setRejectionModalOpen(true);
-          setIsSubmitting(false);
-          return;
-        }
-
-        console.log('Attempting to create course...');
-        const courseId = await createCourse({
-          title: data.title,
-          description: data.description,
-          topicId: data.topicId as any,
-          difficulty: data.difficulty,
-          estimatedDuration: data.estimatedDuration,
-          prerequisites: data.prerequisites,
-          learningObjectives: data.learningObjectives,
-        });
-        console.log('Course created with ID:', courseId);
-
-        setCreatedCourseId(courseId);
-        setCurrentStep(2);
-        toast.success("Course created! Now add your modules.");
-      } catch (error) {
-        toast.dismiss("content-analysis");
-        setIsAnalyzingContent(false);
-        console.error('Error creating course:', error);
-        toast.error(error instanceof Error ? error.message : "Failed to create course");
-      } finally {
+    if (currentStep !== 1) return;
+    setIsSubmitting(true);
+    try {
+      setIsAnalyzingContent(true);
+      toast.loading("Checking content with AI…", { id: "content-analysis" });
+      const issues = await validateCourseContent(data);
+      toast.dismiss("content-analysis");
+      setIsAnalyzingContent(false);
+      if (issues.length > 0) {
+        setRejectionIssues(issues);
+        setRejectionModalOpen(true);
         setIsSubmitting(false);
+        return;
       }
+      const courseId = await createCourse({
+        title: data.title,
+        description: data.description,
+        topicId: data.topicId as any,
+        difficulty: data.difficulty,
+        estimatedDuration: data.estimatedDuration,
+        prerequisites: data.prerequisites,
+        learningObjectives: data.learningObjectives,
+      });
+      setCreatedCourseId(courseId);
+      setCurrentStep(2);
+      toast.success("Course created! Now add your modules.");
+    } catch (error) {
+      toast.dismiss("content-analysis");
+      setIsAnalyzingContent(false);
+      toast.error(error instanceof Error ? error.message : "Failed to create course");
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const debugSubmit = (data: any) => {
-    console.log('Form submitted successfully, calling onSubmit...');
-    onSubmit(data);
   };
 
   const handleFormSubmit = () => {
-    console.log('handleFormSubmit called');
-    console.log('Form errors:', errors);
-    console.log('Form values:', watch());
-    
-    // Force form validation and submission
-    handleSubmit((data) => {
-      console.log('handleSubmit callback triggered with data:', data);
-      onSubmit(data);
-    }, (errors) => {
-      console.log('Form validation errors:', errors);
-      toast.error('Please fill in all required fields correctly');
-    })();
+    handleSubmit(
+      (data) => onSubmit(data),
+      () => toast.error("Please fill in all required fields correctly")
+    )();
   };
 
   const addModule = () => {
-    setModules([...modules, {
-      title: "",
-      description: "",
-      order: modules.length + 1,
-    }]);
+    setModules([...modules, { title: "", description: "", order: modules.length + 1 }]);
   };
 
   const updateModule = async (index: number, field: string, value: any) => {
-    const updatedModules = [...modules];
-    updatedModules[index] = { ...updatedModules[index], [field]: value };
-    setModules(updatedModules);
-    
-    // Real-time AI validation for module content
-    if (field === 'title' || field === 'description') {
-      const module = updatedModules[index];
-      if (module.title.trim() || module.description.trim()) {
-        const issues = await validateSingleModule(module, index);
-        if (issues.length > 0) {
-          // Show validation error for this specific module
-          toast.error(issues[0]); // Show first issue
-        }
+    const updated = [...modules];
+    updated[index] = { ...updated[index], [field]: value };
+    setModules(updated);
+    if (field === "title" || field === "description") {
+      const mod = updated[index];
+      if (mod.title.trim() || mod.description.trim()) {
+        const issues = await validateSingleModule(mod, index);
+        if (issues.length > 0) toast.error(issues[0]);
       }
     }
-  };
-
-  // Validate a single module
-  const validateSingleModule = async (module: { title: string; description: string }, index: number) => {
-    const issues: string[] = [];
-
-    // Validate module title
-    if (module.title.trim()) {
-      const titleValidation = await validateTopicContentAI(module.title.trim());
-      if (!titleValidation.isValid) {
-        issues.push(`Module ${index + 1} title ${titleValidation.error || 'contains inappropriate content'}`);
-      }
-    }
-
-    // Validate module description if provided
-    if (module.description.trim()) {
-      const descValidation = await validateTopicContentAI(module.description.trim());
-      if (!descValidation.isValid) {
-        issues.push(`Module ${index + 1} description ${descValidation.error || 'contains inappropriate content'}`);
-      }
-    }
-
-    return issues;
   };
 
   const removeModule = (index: number) => {
@@ -252,109 +170,77 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
   };
 
   const finishCourseCreation = async () => {
-    console.log('finishCourseCreation called');
-    console.log('modules:', modules);
-    
-    // Simple test to make sure button click works
-    toast("Button clicked! Checking modules...");
-    
-    if (!createdCourseId) {
-      console.log('No createdCourseId, returning');
-      return;
-    }
-    
-    console.log('createdCourseId exists:', createdCourseId);
+    if (!createdCourseId) return;
     setIsSubmitting(true);
     try {
       setIsAnalyzingContent(true);
-      toast.loading("Please wait while AI checks your module content...", { id: "module-analysis" });
-      
-      console.log('Starting AI validation for modules...');
-      // AI-powered content validation for modules
+      toast.loading("Checking module content with AI…", { id: "module-analysis" });
       const moduleIssues = await validateModuleContent(modules);
-      console.log('Module validation results:', moduleIssues);
-      
       toast.dismiss("module-analysis");
       setIsAnalyzingContent(false);
-      
       if (moduleIssues.length > 0) {
-        console.log('Module issues found:', moduleIssues);
         setRejectionIssues(moduleIssues);
         setRejectionModalOpen(true);
         setIsSubmitting(false);
         return;
       }
-      // Use useMutation hooks for Convex mutations
       const createModuleMutation = useMutation(api.courseModules.createModule);
       const generateCourseUploadUrlMutation = useMutation(api.courseModules.generateCourseUploadUrl);
       const storeCourseUploadedFileMutation = useMutation(api.courseModules.storeCourseUploadedFile);
       const uploadModuleVideoMutation = useMutation(api.courseModules.uploadModuleVideo);
       const uploadModuleFileMutation = useMutation(api.courseModules.uploadModuleFile);
 
-      for (const module of modules) {
-        if (!module.title.trim()) continue;
-
-        // Create module
+      for (const mod of modules) {
+        if (!mod.title.trim()) continue;
         const moduleId = await createModuleMutation({
           courseId: createdCourseId,
-          title: module.title,
-          description: module.description,
-          order: module.order,
+          title: mod.title,
+          description: mod.description,
+          order: mod.order,
         });
-
-        // Upload video if provided
-        if (module.videoFile) {
+        if (mod.videoFile) {
           const uploadUrl = await generateCourseUploadUrlMutation();
-          const response = await fetch(uploadUrl, {
+          const res = await fetch(uploadUrl, {
             method: "POST",
-            headers: { "Content-Type": module.videoFile.type },
-            body: module.videoFile,
+            headers: { "Content-Type": mod.videoFile.type },
+            body: mod.videoFile,
           });
-          
-          if (response.ok) {
-            const { storageId } = await response.json();
+          if (res.ok) {
+            const { storageId } = await res.json();
             const fileUrl = await storeCourseUploadedFileMutation({ storageId });
-            
             if (fileUrl) {
               await uploadModuleVideoMutation({
                 moduleId,
                 videoUrl: fileUrl,
-                videoName: module.videoFile.name,
-                videoSize: module.videoFile.size,
-                videoType: module.videoFile.type,
+                videoName: mod.videoFile.name,
+                videoSize: mod.videoFile.size,
+                videoType: mod.videoFile.type,
               });
             }
           }
         }
-
-        // Upload document if provided
-        if (module.documentFile) {
+        if (mod.documentFile) {
           const uploadUrl = await generateCourseUploadUrlMutation();
-          const response = await fetch(uploadUrl, {
+          const res = await fetch(uploadUrl, {
             method: "POST",
-            headers: { "Content-Type": module.documentFile.type },
-            body: module.documentFile,
+            headers: { "Content-Type": mod.documentFile.type },
+            body: mod.documentFile,
           });
-          
-          if (response.ok) {
-            const { storageId } = await response.json();
+          if (res.ok) {
+            const { storageId } = await res.json();
             const fileUrl = await storeCourseUploadedFileMutation({ storageId });
-            
             if (fileUrl) {
               await uploadModuleFileMutation({
                 moduleId,
                 fileUrl,
-                fileName: module.documentFile.name,
-                fileSize: module.documentFile.size,
-                fileType: module.documentFile.type,
+                fileName: mod.documentFile.name,
+                fileSize: mod.documentFile.size,
+                fileType: mod.documentFile.type,
               });
-            } else {
-              console.error("Failed to get file URL from storage");
             }
           }
         }
       }
-
       toast.success("Course and modules created successfully!");
       reset();
       setIsOpen(false);
@@ -400,149 +286,166 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-[#020617] border border-white/10 text-white">
         <DialogHeader>
-          <DialogTitle>
-            {currentStep === 1 ? "Create New Course" : "Add Course Modules"}
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+              currentStep === 1 ? "bg-pink-500 text-white" : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
+            }`}>
+              {currentStep > 1 ? "✓" : "1"}
+            </div>
+            <div className={`h-px flex-1 transition-colors ${currentStep > 1 ? "bg-emerald-500/30" : "bg-white/10"}`} />
+            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+              currentStep === 2 ? "bg-pink-500 text-white" : "bg-white/[0.06] border border-white/15 text-white/30"
+            }`}>
+              2
+            </div>
+          </div>
+          <DialogTitle className="text-white text-lg">
+            {currentStep === 1 ? "Course Details" : "Add Modules"}
           </DialogTitle>
+          <p className="text-white/40 text-sm">
+            {currentStep === 1
+              ? "Set up the basics — you can always edit later."
+              : "Break your course into modules. Each can have a video and supporting documents."}
+          </p>
         </DialogHeader>
 
         {currentStep === 1 ? (
-          <form onSubmit={handleSubmit(debugSubmit)} className="space-y-6">
-            {/* Step 1: Basic Course Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Basic Information</h3>
-              
-              <div>
-                <Label htmlFor="title">Course Title</Label>
-                <Input
-                  id="title"
-                  {...register("title")}
-                  placeholder="Enter course title"
-                />
-                {errors.title && (
-                  <p className="text-sm text-red-500 mt-1">{errors.title.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="description">Course Description</Label>
-                <Textarea
-                  id="description"
-                  {...register("description")}
-                  placeholder="Describe what students will learn in this course"
-                  rows={4}
-                />
-                {errors.description && (
-                  <p className="text-sm text-red-500 mt-1">{errors.description.message}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit((data) => onSubmit(data))} className="space-y-7 mt-2">
+            {/* Basic Information */}
+            <div>
+              <p className={sectionHeadingCls}>Basic Information</p>
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="topic">Primary Topic</Label>
-                  <Select onValueChange={(value) => setValue("topicId", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a topic" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {topics.map((topic) => (
-                        <SelectItem key={topic._id} value={topic._id}>
-                          {topic.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.topicId && (
-                    <p className="text-sm text-red-500 mt-1">Topic is required</p>
-                  )}
+                  <label className={labelCls}>Course Title</label>
+                  <input
+                    {...register("title")}
+                    placeholder="e.g. Mastering React Hooks"
+                    className={inputCls}
+                  />
+                  {errors.title && <p className="text-rose-400 text-xs mt-1.5">{errors.title.message}</p>}
                 </div>
 
                 <div>
-                  <Label htmlFor="difficulty">Difficulty Level</Label>
-                  <Select onValueChange={(value) => setValue("difficulty", value as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">Beginner</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.difficulty && (
-                    <p className="text-sm text-red-500 mt-1">{errors.difficulty.message}</p>
-                  )}
+                  <label className={labelCls}>Description</label>
+                  <textarea
+                    {...register("description")}
+                    placeholder="What will students learn? What problems will this course solve?"
+                    rows={4}
+                    className={`${inputCls} resize-none`}
+                  />
+                  {errors.description && <p className="text-rose-400 text-xs mt-1.5">{errors.description.message}</p>}
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="estimatedDuration">Estimated Duration (minutes)</Label>
-                <Input
-                  id="estimatedDuration"
-                  type="number"
-                  {...register("estimatedDuration", { valueAsNumber: true })}
-                  placeholder="e.g., 180"
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Primary Topic</label>
+                    <Select onValueChange={(v) => setValue("topicId", v)}>
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl h-10 focus:border-pink-500/50 focus:ring-pink-500/20">
+                        <SelectValue placeholder="Select topic" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0d1117] border border-white/10 text-white">
+                        {topics.map((topic) => (
+                          <SelectItem key={topic._id} value={topic._id} className="focus:bg-white/5 focus:text-white">
+                            {topic.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.topicId && <p className="text-rose-400 text-xs mt-1.5">Topic is required</p>}
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Difficulty</label>
+                    <Select onValueChange={(v) => setValue("difficulty", v as any)}>
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl h-10 focus:border-pink-500/50 focus:ring-pink-500/20">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0d1117] border border-white/10 text-white">
+                        <SelectItem value="beginner" className="focus:bg-white/5 focus:text-white">Beginner</SelectItem>
+                        <SelectItem value="intermediate" className="focus:bg-white/5 focus:text-white">Intermediate</SelectItem>
+                        <SelectItem value="advanced" className="focus:bg-white/5 focus:text-white">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.difficulty && <p className="text-rose-400 text-xs mt-1.5">{errors.difficulty.message}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelCls}>Estimated Duration (minutes)</label>
+                  <input
+                    type="number"
+                    {...register("estimatedDuration", { valueAsNumber: true })}
+                    placeholder="e.g. 180"
+                    className={inputCls}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Prerequisites */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Prerequisites</h3>
-              
-              <div className="flex gap-2">
-                <Input
+            <div>
+              <p className={sectionHeadingCls}>Prerequisites</p>
+              <div className="flex gap-2 mb-3">
+                <input
                   value={prerequisiteInput}
                   onChange={(e) => setPrerequisiteInput(e.target.value)}
-                  placeholder="Add a prerequisite"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addPrerequisite())}
+                  placeholder="e.g. Basic JavaScript knowledge"
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addPrerequisite())}
+                  className={inputCls}
                 />
-                <Button type="button" onClick={addPrerequisite} variant="outline">
+                <button
+                  type="button"
+                  onClick={addPrerequisite}
+                  className="shrink-0 w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                >
                   <Plus className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
-
               {watchedPrerequisites.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {watchedPrerequisites.map((prereq, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  {watchedPrerequisites.map((prereq, i) => (
+                    <span key={i} className="flex items-center gap-1.5 bg-white/[0.06] border border-white/15 text-white/70 text-xs px-3 py-1.5 rounded-full">
                       {prereq}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removePrerequisite(index)}
-                      />
-                    </Badge>
+                      <button type="button" onClick={() => removePrerequisite(i)} className="text-white/40 hover:text-white transition-colors">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
                   ))}
                 </div>
               )}
             </div>
 
             {/* Learning Objectives */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Learning Objectives</h3>
-              
-              <div className="flex gap-2">
-                <Input
+            <div>
+              <p className={sectionHeadingCls}>Learning Objectives</p>
+              <div className="flex gap-2 mb-3">
+                <input
                   value={objectiveInput}
                   onChange={(e) => setObjectiveInput(e.target.value)}
-                  placeholder="Add a learning objective"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addObjective())}
+                  placeholder="e.g. Build a full-stack app with Next.js"
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addObjective())}
+                  className={inputCls}
                 />
-                <Button type="button" onClick={addObjective} variant="outline">
+                <button
+                  type="button"
+                  onClick={addObjective}
+                  className="shrink-0 w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                >
                   <Plus className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
-
               {watchedObjectives.length > 0 && (
                 <div className="space-y-2">
-                  {watchedObjectives.map((objective, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 border rounded">
-                      <span className="flex-1">{objective}</span>
-                      <X
-                        className="h-4 w-4 cursor-pointer text-red-500"
-                        onClick={() => removeObjective(index)}
-                      />
+                  {watchedObjectives.map((obj, i) => (
+                    <div key={i} className="flex items-center gap-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3.5 py-2.5">
+                      <span className="text-pink-400 text-xs shrink-0">•</span>
+                      <span className="flex-1 text-sm text-white/75">{obj}</span>
+                      <button type="button" onClick={() => removeObjective(i)} className="text-white/30 hover:text-rose-400 transition-colors shrink-0">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -550,145 +453,156 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="px-4 py-2 text-sm text-white/55 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+              >
                 Cancel
-              </Button>
-              <Button type="button" onClick={handleFormSubmit} disabled={isSubmitting || isAnalyzingContent}>
+              </button>
+              <Button
+                type="button"
+                onClick={handleFormSubmit}
+                disabled={isSubmitting || isAnalyzingContent}
+                className="bg-white text-black hover:bg-white/90 font-semibold rounded-xl h-9 px-5 text-sm"
+              >
                 {isAnalyzingContent ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Analyzing Content...
-                  </>
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />Checking content…</>
                 ) : isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Creating...
-                  </>
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />Creating…</>
                 ) : (
-                  "Continue to Modules"
+                  <>Continue <ChevronRight className="h-3.5 w-3.5 ml-1" /></>
                 )}
               </Button>
             </div>
           </form>
         ) : (
-          /* Step 2: Add Modules */
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Course Modules</h3>
-                <Button onClick={addModule} variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
+          /* Step 2: Modules */
+          <div className="space-y-6 mt-2">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <p className={sectionHeadingCls}>Course Modules</p>
+                <button
+                  onClick={addModule}
+                  className="flex items-center gap-1.5 text-xs text-white/55 hover:text-white px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
                   Add Module
-                </Button>
+                </button>
               </div>
 
               {modules.length === 0 ? (
-                <Card>
-                  <CardContent className="p-6 text-center text-muted-foreground">
-                    <Video className="h-12 w-12 mx-auto mb-4" />
-                    <p>No modules yet. Add your first module to get started.</p>
-                  </CardContent>
-                </Card>
+                <div className="bg-white/[0.03] border border-dashed border-white/10 rounded-2xl p-10 text-center">
+                  <div className="w-12 h-12 bg-white/[0.04] border border-white/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Video className="h-5 w-5 text-white/25" />
+                  </div>
+                  <p className="text-white/35 text-sm">No modules yet. Add your first module above.</p>
+                </div>
               ) : (
-                <div className="space-y-4">
-                  {modules.map((module, index) => (
-                    <Card key={index}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">Module {index + 1}</CardTitle>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => removeModule(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  {modules.map((mod, index) => (
+                    <div key={index} className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-xs font-semibold text-white/35 uppercase tracking-widest">
+                          Module {index + 1}
+                        </span>
+                        <button
+                          onClick={() => removeModule(index)}
+                          className="text-white/30 hover:text-rose-400 transition-colors p-1 rounded-lg hover:bg-rose-500/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
                         <div>
-                          <Label>Module Title</Label>
-                          <Input
-                            value={module.title}
+                          <label className={labelCls}>Module Title</label>
+                          <input
+                            value={mod.title}
                             onChange={(e) => updateModule(index, "title", e.target.value)}
-                            placeholder="Enter module title"
+                            placeholder="e.g. Introduction to Hooks"
+                            className={inputCls}
                           />
                         </div>
 
                         <div>
-                          <Label>Description</Label>
-                          <Textarea
-                            value={module.description}
+                          <label className={labelCls}>Description</label>
+                          <textarea
+                            value={mod.description}
                             onChange={(e) => updateModule(index, "description", e.target.value)}
-                            placeholder="Describe what this module covers"
+                            placeholder="What will students learn in this module?"
                             rows={2}
+                            className={`${inputCls} resize-none`}
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label>Video File (optional)</Label>
-                            <Input
-                              type="file"
-                              accept="video/*"
-                              onChange={(e) => updateModule(index, "videoFile", e.target.files?.[0])}
-                            />
-                            {module.videoFile && (
-                              <p className="text-sm text-green-600 mt-1">
-                                {module.videoFile.name}
-                              </p>
-                            )}
+                            <label className={labelCls}>Video (optional)</label>
+                            <label className={`flex items-center gap-2 cursor-pointer ${inputCls} py-2`}>
+                              <Video className="h-4 w-4 text-white/30 shrink-0" />
+                              <span className={`text-sm truncate ${mod.videoFile ? "text-emerald-400" : "text-white/25"}`}>
+                                {mod.videoFile ? mod.videoFile.name : "Choose video"}
+                              </span>
+                              <input
+                                type="file"
+                                accept="video/*"
+                                className="hidden"
+                                onChange={(e) => updateModule(index, "videoFile", e.target.files?.[0])}
+                              />
+                            </label>
                           </div>
 
                           <div>
-                            <Label>Document File (optional)</Label>
-                            <Input
-                              type="file"
-                              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx"
-                              onChange={(e) => updateModule(index, "documentFile", e.target.files?.[0])}
-                            />
-                            {module.documentFile && (
-                              <p className="text-sm text-blue-600 mt-1">
-                                {module.documentFile.name}
-                              </p>
-                            )}
+                            <label className={labelCls}>Document (optional)</label>
+                            <label className={`flex items-center gap-2 cursor-pointer ${inputCls} py-2`}>
+                              <FileText className="h-4 w-4 text-white/30 shrink-0" />
+                              <span className={`text-sm truncate ${mod.documentFile ? "text-blue-400" : "text-white/25"}`}>
+                                {mod.documentFile ? mod.documentFile.name : "Choose file"}
+                              </span>
+                              <input
+                                type="file"
+                                accept=".pdf,.doc,.docx,.txt,.ppt,.pptx"
+                                className="hidden"
+                                onChange={(e) => updateModule(index, "documentFile", e.target.files?.[0])}
+                              />
+                            </label>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
 
             {/* Actions */}
-            <div className="flex justify-between gap-2 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+            <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+              <button
+                type="button"
                 onClick={() => setCurrentStep(1)}
+                className="px-4 py-2 text-sm text-white/55 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
               >
-                Back
-              </Button>
+                ← Back
+              </button>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={reset}>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="px-4 py-2 text-sm text-white/55 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                >
                   Cancel
-                </Button>
-                <Button 
-                  onClick={finishCourseCreation} 
+                </button>
+                <Button
+                  onClick={finishCourseCreation}
                   disabled={isSubmitting || isAnalyzingContent || modules.length === 0}
+                  className="bg-white text-black hover:bg-white/90 font-semibold rounded-xl h-9 px-5 text-sm"
                 >
                   {isAnalyzingContent ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                      Analyzing Content...
-                    </>
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />Checking content…</>
                   ) : isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Creating...
-                    </>
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />Creating…</>
                   ) : (
                     "Create Course"
                   )}
@@ -701,55 +615,48 @@ export const CreateCourseModal = ({ children, onSuccess }: CreateCourseModalProp
 
       {/* Content Rejection Modal */}
       <Dialog open={rejectionModalOpen} onOpenChange={setRejectionModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-[#020617] border border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-rose-400">
+              <div className="w-8 h-8 bg-rose-500/15 border border-rose-500/25 rounded-lg flex items-center justify-center shrink-0">
+                <AlertCircle className="h-4 w-4" />
+              </div>
               Content Not Approved
             </DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Your course could not be created due to the following content issues:
-            </p>
-            {rejectionIssues.map((issue, index) => (
-              <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded-lg">
-                <X className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                <span className="text-sm">{issue}</span>
+
+          <div className="space-y-2 my-1">
+            <p className="text-white/45 text-sm">Your course could not be created due to the following issues:</p>
+            {rejectionIssues.map((issue, i) => (
+              <div key={i} className="flex items-start gap-2.5 bg-rose-500/[0.07] border border-rose-500/20 rounded-xl p-3">
+                <X className="h-4 w-4 text-rose-400 mt-0.5 shrink-0" />
+                <span className="text-sm text-white/75">{issue}</span>
               </div>
             ))}
           </div>
 
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Please review and revise your content:</strong>
-            </p>
-            <ul className="text-xs text-blue-700 mt-1 space-y-1">
-              <li>• Ensure your title is professional and meaningful</li>
-              <li>• Provide substantial course description</li>
-              <li>• Use professional language and avoid inappropriate words</li>
-              <li>• Make sure prerequisites are relevant and appropriate</li>
-              <li>• Keep learning objectives professional and clear</li>
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+            <p className="text-white/55 text-xs font-semibold uppercase tracking-widest mb-2">Guidelines</p>
+            <ul className="text-xs text-white/40 space-y-1">
+              <li>• Use a professional, meaningful course title</li>
+              <li>• Write a substantial, clear description</li>
+              <li>• Keep prerequisites relevant and appropriate</li>
               <li>• Module titles and descriptions should be professional</li>
             </ul>
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
-            <p className="text-xs text-amber-800">
-              <strong>Note:</strong> Content moderation is performed by AI and may occasionally make errors. 
-              If you believe your content was incorrectly flagged, please contact our support team for review.
+          <div className="bg-amber-500/[0.07] border border-amber-500/20 rounded-xl p-3">
+            <p className="text-amber-400/80 text-xs">
+              AI moderation may occasionally make errors. If you believe your content was wrongly flagged, contact support.
             </p>
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button 
-              onClick={() => setRejectionModalOpen(false)}
-              className="flex-1"
-            >
-              I'll Fix It
-            </Button>
-          </div>
+          <Button
+            onClick={() => setRejectionModalOpen(false)}
+            className="w-full bg-white text-black hover:bg-white/90 font-semibold rounded-xl h-10"
+          >
+            Review & Fix
+          </Button>
         </DialogContent>
       </Dialog>
     </Dialog>

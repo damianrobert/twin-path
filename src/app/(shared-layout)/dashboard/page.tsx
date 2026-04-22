@@ -11,7 +11,7 @@ import {
   Bell,
   User,
   Users,
-  BookOpen,
+  Presentation,
   GraduationCap,
   Search,
   MessageCircle,
@@ -109,10 +109,10 @@ const DashboardPage = () => {
     ...(isMentor
       ? [
           {
-            title: "My Courses",
-            description: "Create and manage your courses",
+            title: "Course Studio",
+            description: "Publish and manage the courses you teach",
             href: "/dashboard/courses",
-            icon: <BookOpen className="h-5 w-5 text-pink-400" />,
+            icon: <Presentation className="h-5 w-5 text-pink-400" />,
             gradient: "from-pink-500/10 via-pink-500/5 to-transparent",
             iconBg: "bg-pink-500/15 border border-pink-500/20",
           },
