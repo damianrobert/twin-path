@@ -1,36 +1,36 @@
 "use client";
 
 import { signUpSchema } from "@/app/schemas/auth";
-import { ValidatedForm, ValidatedInput, SecurityIndicator } from "@/components/ui/validated-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { useMaintenance } from "@/contexts/MaintenanceContext";
-import { AlertTriangle } from "lucide-react";
+import Logo from "@/components/web/Logo";
+import z from "zod";
 
-  const SignUpPage = () => {
+const SignUpPage = () => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { isMaintenanceMode, maintenanceMessage } = useMaintenance();
 
-  async function onSubmit(data: any) {
-    // Check maintenance mode before attempting signup
+  const form = useForm({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { name: "", email: "", password: "" },
+  });
+
+  function onSubmit(data: z.infer<typeof signUpSchema>) {
     if (isMaintenanceMode) {
       toast.error("Platform is currently under maintenance. Please try again later.");
       return;
     }
-
     startTransition(async () => {
       await authClient.signUp.email({
         email: data.email,
@@ -50,111 +50,113 @@ import { AlertTriangle } from "lucide-react";
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-6">
-        {/* Maintenance Banner */}
-        {isMaintenanceMode && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-yellow-800 dark:text-yellow-300">Under Maintenance</h3>
-                <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                  {maintenanceMessage}
-                </p>
-                <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
-                  Please check back later. Account creation is temporarily disabled.
-                </p>
-              </div>
+    <div className="w-full space-y-4">
+      {isMaintenanceMode && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-400 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-yellow-300">Under Maintenance</h3>
+              <p className="text-sm text-yellow-400/80 mt-1">{maintenanceMessage}</p>
+              <p className="text-xs text-yellow-500/60 mt-2">Account creation is temporarily disabled.</p>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Signup Card - Hidden during maintenance */}
-        {!isMaintenanceMode && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Sign up</CardTitle>
-              <CardDescription>Create an account to get started</CardDescription>
-            </CardHeader>
+      {!isMaintenanceMode && (
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+          <div className="flex justify-center mb-6">
+            <Logo />
+          </div>
 
-            <CardContent>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <FieldGroup className="gap-y-4">
-                  <Controller
-                    name="name"
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Field>
-                        <FieldLabel>Full Name</FieldLabel>
-                        <Input
-                          aria-invalid={fieldState.invalid}
-                          placeholder="John Doe"
-                          {...field}
-                        />
-                        {fieldState.invalid && (
-                          <FieldError errors={[fieldState.error]} />
-                        )}
-                      </Field>
-                    )}
-                  />
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-white">Create your account</h1>
+            <p className="text-white/45 text-sm mt-1.5">Start your mentorship journey today</p>
+          </div>
 
-                  <Controller
-                    name="email"
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Field>
-                        <FieldLabel>Email</FieldLabel>
-                        <Input
-                          aria-invalid={fieldState.invalid}
-                          placeholder="john@doe.com"
-                          type="email"
-                          {...field}
-                        />
-                        {fieldState.invalid && (
-                          <FieldError errors={[fieldState.error]} />
-                        )}
-                      </Field>
-                    )}
-                  />
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <FieldGroup className="gap-y-4">
+              <Controller
+                name="name"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel className="text-white/60 text-sm">Full Name</FieldLabel>
+                    <Input
+                      aria-invalid={fieldState.invalid}
+                      placeholder="John Doe"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/20"
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
 
-                  <Controller
-                    name="password"
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Field>
-                        <FieldLabel>Password</FieldLabel>
-                        <Input
-                          aria-invalid={fieldState.invalid}
-                          placeholder="******"
-                          type="password"
-                          {...field}
-                        />
-                        {fieldState.invalid && (
-                          <FieldError errors={[fieldState.error]} />
-                        )}
-                      </Field>
-                    )}
-                  />
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel className="text-white/60 text-sm">Email</FieldLabel>
+                    <Input
+                      aria-invalid={fieldState.invalid}
+                      placeholder="you@example.com"
+                      type="email"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/20"
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
 
-                  <Button disabled={isPending}>
-                    {isPending ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin mb-6"></Loader2>
-                        <span>Loading...</span>
-                      </>
-                    ) : (
-                      <span>Signup</span>
-                    )}
-                  </Button>
-                </FieldGroup>
-              </form>
+              <Controller
+                name="password"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel className="text-white/60 text-sm">Password</FieldLabel>
+                    <Input
+                      aria-invalid={fieldState.invalid}
+                      placeholder="••••••••"
+                      type="password"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/20"
+                      {...field}
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
 
-              <Link className="text-sm text-muted-foreground hover:text-white" href="/auth/login">Already have an account? Login</Link>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              <Button
+                disabled={isPending}
+                className="w-full bg-white text-black hover:bg-white/90 font-semibold rounded-xl h-11 mt-2"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin mr-2" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create account"
+                )}
+              </Button>
+            </FieldGroup>
+          </form>
+
+          <p className="text-center text-sm text-white/35 mt-6">
+            Already have an account?{" "}
+            <Link
+              href="/auth/login"
+              className="text-purple-400 hover:text-purple-300 font-medium transition-colors"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
+      )}
     </div>
   );
 };
