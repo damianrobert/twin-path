@@ -3,8 +3,21 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Users, BookOpen, Target, MessageCircle, Award, Shield, Zap, Footprints, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  Users,
+  BookOpen,
+  Target,
+  MessageCircle,
+  Award,
+  Shield,
+  Star,
+  Loader2,
+  Sparkles,
+  TrendingUp,
+  CheckCircle2,
+  Zap,
+} from "lucide-react";
 import Logo from "@/components/web/Logo";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
@@ -18,387 +31,490 @@ export default function LandingPage() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const [queryTimedOut, setQueryTimedOut] = React.useState(false);
 
-  // Add timeout for the profile query specifically
   React.useEffect(() => {
     const timeout = setTimeout(() => {
       if (currentProfile === undefined) {
         setQueryTimedOut(true);
       }
-    }, 3000); // 3 second timeout for profile query
-
+    }, 3000);
     return () => clearTimeout(timeout);
   }, [currentProfile]);
 
   useEffect(() => {
-    // Only redirect if user is authenticated AND has a profile AND query hasn't timed out
     if (isAuthenticated && currentProfile && authLoading === false && !queryTimedOut) {
       router.push("/dashboard");
     }
   }, [isAuthenticated, currentProfile, authLoading, router, queryTimedOut]);
 
-  // Show loading only while auth is loading and query hasn't timed out
   if (authLoading || (!queryTimedOut && currentProfile === undefined)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="size-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-[#020617]">
+        <Loader2 className="size-8 animate-spin text-white/40" />
       </div>
     );
   }
 
-  // If user is authenticated and has a profile (and query didn't time out), don't render landing page
   if (isAuthenticated && currentProfile && !queryTimedOut) {
     return null;
   }
 
-  // If query timed out but user is authenticated, show landing page anyway
-  // This prevents infinite loading during logout
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-[#020617] text-white overflow-x-hidden">
+      {/* Ambient background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.15),transparent_70%)]" />
+        <div className="absolute top-1/3 -left-32 w-[500px] h-[500px] rounded-full bg-purple-600/5 blur-3xl animate-pulse" />
+        <div className="absolute top-1/2 -right-32 w-[500px] h-[500px] rounded-full bg-blue-600/5 blur-3xl animate-pulse [animation-delay:2s]" />
+      </div>
+
       {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Logo />
-            <div className="flex items-center space-x-4">
-              <Link href="/dashboard">
-                <Button variant="secondary">Dashboard</Button>
-              </Link>
-              <Link href="/auth/login">
-                <Button>Get Started</Button>
-              </Link>
-            </div>
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl px-4">
+        <nav className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-2xl px-5 py-3 flex justify-between items-center shadow-xl shadow-black/20">
+          <Logo />
+          <div className="flex items-center gap-2">
+            <Link href="/auth/login">
+              <Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/5 text-sm">
+                Sign in
+              </Button>
+            </Link>
+            <Link href="/auth/login">
+              <Button className="bg-white text-black hover:bg-white/90 text-sm font-semibold rounded-xl h-9 px-5">
+                Get started free
+              </Button>
+            </Link>
           </div>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="mb-8">
-            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Find Your Perfect Mentor
-              </span>
-              <br />
-              <span className="text-gray-900">Accelerate Your Career Growth</span>
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              Connect with experienced professionals who can guide you through your career journey. 
-              Learn real-world skills, get personalized advice, and achieve your goals faster.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/auth/login">
-                <Button size="lg" className="px-8 py-3">
-                  Start Your Journey
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button size="lg" variant="outline" className="px-8 py-3">
-                  Explore Platform
-                </Button>
-              </Link>
-            </div>
+      <section className="relative min-h-screen flex flex-col items-center justify-center pt-24 pb-16 px-4">
+        <div className="relative z-10 text-center max-w-5xl mx-auto">
+          {/* Eyebrow badge */}
+          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-white/60 mb-10 backdrop-blur-sm">
+            <Sparkles className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+            <span>Trusted by <span className="text-white/80 font-medium">10,000+</span> professionals worldwide</span>
+          </div>
+
+          {/* Main headline */}
+          <h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight mb-6 leading-[1.05]">
+            <span className="text-white">Find Your Perfect</span>
+            <br />
+            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+              Mentor Match
+            </span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-white/45 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Connect with industry experts, get personalized 1-on-1 guidance, and accelerate your career growth with TwinPath.
+          </p>
+
+          {/* CTA buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-20">
+            <Link href="/auth/login">
+              <Button
+                size="lg"
+                className="bg-white text-black hover:bg-white/90 h-12 px-8 text-base font-semibold rounded-xl shadow-lg shadow-white/10 gap-2"
+              >
+                Start for free
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button
+                size="lg"
+                variant="ghost"
+                className="border border-white/10 bg-white/[0.03] text-white/70 hover:text-white hover:bg-white/[0.07] h-12 px-8 text-base rounded-xl backdrop-blur-sm"
+              >
+                Explore Platform
+              </Button>
+            </Link>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">500+</div>
-              <div className="text-gray-600 mt-2">Expert Mentors</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600">10,000+</div>
-              <div className="text-gray-600 mt-2">Mentees Helped</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">95%</div>
-              <div className="text-gray-600 mt-2">Success Rate</div>
-            </div>
+          <div className="inline-grid grid-cols-3 divide-x divide-white/10 bg-white/[0.03] border border-white/10 rounded-2xl backdrop-blur-sm overflow-hidden">
+            {[
+              { value: "500+", label: "Expert Mentors" },
+              { value: "10K+", label: "Mentees Helped" },
+              { value: "95%", label: "Success Rate" },
+            ].map((stat) => (
+              <div key={stat.label} className="px-8 py-5 text-center">
+                <div className="text-2xl font-bold text-white">{stat.value}</div>
+                <div className="text-xs text-white/40 mt-0.5 font-medium">{stat.label}</div>
+              </div>
+            ))}
           </div>
+        </div>
+
+        {/* Scroll cue */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/20 text-xs tracking-widest uppercase animate-bounce select-none">
+          scroll
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Why Choose TwinPath?
+      {/* Social proof bar */}
+      <div className="relative z-10 border-y border-white/[0.06] bg-white/[0.02] py-5">
+        <div className="max-w-5xl mx-auto px-4 flex flex-wrap items-center justify-center gap-x-12 gap-y-2 text-white/30 text-sm font-medium">
+          <span className="text-white/20 text-xs uppercase tracking-widest">Professionals from</span>
+          {["Google", "Meta", "Stripe", "Airbnb", "Shopify", "Figma"].map((co) => (
+            <span key={co} className="text-white/40 font-semibold">{co}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Features — Bento Grid */}
+      <section className="relative z-10 py-32 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-white/50 mb-6">
+              <TrendingUp className="h-3.5 w-3.5 text-purple-400" />
+              Why TwinPath
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
+              Everything you need to grow
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Everything you need to accelerate your professional growth in one platform
+            <p className="text-white/40 mt-4 text-lg max-w-xl mx-auto">
+              One platform. Every tool to accelerate your professional journey.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="p-6 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-blue-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-auto">
+            {/* Large feature card */}
+            <div className="lg:col-span-2 group relative bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-violet-500/15 border border-violet-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-violet-500/25 transition-colors">
+                  <Users className="h-5 w-5 text-violet-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Expert Mentors</h3>
-                <p className="text-gray-600">
-                  Learn from industry professionals with proven track records and real-world experience.
+                <h3 className="text-xl font-semibold mb-2 text-white">Expert Mentors</h3>
+                <p className="text-white/45 leading-relaxed">
+                  Learn from verified industry professionals with proven track records across tech, product, design, finance, and more.
                 </p>
-              </CardContent>
-            </Card>
+                <div className="mt-6 flex gap-2">
+                  {["Engineering", "Product", "Design", "Finance"].map((tag) => (
+                    <span key={tag} className="text-xs bg-white/5 border border-white/10 rounded-full px-3 py-1 text-white/40">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-            <Card className="p-6 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                  <Target className="h-6 w-6 text-purple-600" />
+            {/* Tall card */}
+            <div className="group relative bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-blue-500/15 border border-blue-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-500/25 transition-colors">
+                  <Target className="h-5 w-5 text-blue-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Personalized Learning</h3>
-                <p className="text-gray-600">
-                  Get customized guidance tailored to your specific goals, skills, and career aspirations.
+                <h3 className="text-xl font-semibold mb-2 text-white">Personalized Paths</h3>
+                <p className="text-white/45 leading-relaxed">
+                  Customized guidance tailored to your specific goals, skills, and career aspirations.
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="p-6 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                  <MessageCircle className="h-6 w-6 text-green-600" />
+            {/* Small card */}
+            <div className="group relative bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-emerald-500/15 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-500/25 transition-colors">
+                  <MessageCircle className="h-5 w-5 text-emerald-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Real-time Communication</h3>
-                <p className="text-gray-600">
-                  Connect with mentors through messaging, video calls, and collaborative tools.
+                <h3 className="text-xl font-semibold mb-2 text-white">Real-time Chat</h3>
+                <p className="text-white/45 leading-relaxed">
+                  Message, collaborate, and learn in real time with your mentor.
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="p-6 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
-                  <BookOpen className="h-6 w-6 text-orange-600" />
+            {/* Wide card */}
+            <div className="lg:col-span-2 group relative bg-gradient-to-br from-pink-500/10 via-rose-500/5 to-transparent border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+              <div className="relative z-10 flex items-start gap-8">
+                <div>
+                  <div className="w-12 h-12 bg-pink-500/15 border border-pink-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-pink-500/25 transition-colors">
+                    <BookOpen className="h-5 w-5 text-pink-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2 text-white">Structured Courses</h3>
+                  <p className="text-white/45 leading-relaxed">
+                    Follow curated learning paths with clear milestones and progress tracking built for real results.
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Structured Learning</h3>
-                <p className="text-gray-600">
-                  Follow curated learning paths with clear milestones and progress tracking.
-                </p>
-              </CardContent>
-            </Card>
+                <div className="hidden lg:flex flex-col gap-3 min-w-48 mt-2">
+                  {["Set clear goals", "Track milestones", "Celebrate wins"].map((item) => (
+                    <div key={item} className="flex items-center gap-2.5 text-sm text-white/50">
+                      <CheckCircle2 className="h-4 w-4 text-pink-400 shrink-0" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-            <Card className="p-6 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4">
-                  <Award className="h-6 w-6 text-pink-600" />
+            {/* Small card */}
+            <div className="group relative bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-amber-500/15 border border-amber-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-amber-500/25 transition-colors">
+                  <Award className="h-5 w-5 text-amber-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Achievement Tracking</h3>
-                <p className="text-gray-600">
-                  Monitor your progress with detailed analytics and celebrate your achievements.
+                <h3 className="text-xl font-semibold mb-2 text-white">Achievement Tracking</h3>
+                <p className="text-white/45 leading-relaxed">
+                  Monitor your growth with detailed analytics and celebrate every milestone.
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="p-6 border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="h-6 w-6 text-indigo-600" />
+            <div className="group relative bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-transparent border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-indigo-500/15 border border-indigo-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-indigo-500/25 transition-colors">
+                  <Shield className="h-5 w-5 text-indigo-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Safe & Secure</h3>
-                <p className="text-gray-600">
-                  AI-powered content moderation ensures a professional and respectful learning environment.
+                <h3 className="text-xl font-semibold mb-2 text-white">Safe & Moderated</h3>
+                <p className="text-white/45 leading-relaxed">
+                  AI-powered moderation ensures a professional and respectful environment.
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
+      <section className="relative z-10 py-32 px-4">
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              How TwinPath Works
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-white/50 mb-6">
+              <Zap className="h-3.5 w-3.5 text-yellow-400" />
+              How it works
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
+              Up and running in minutes
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Get started in minutes and begin your mentorship journey
+            <p className="text-white/40 mt-4 text-lg">
+              Three simple steps to start your mentorship journey.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-white">1</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Create Your Profile</h3>
-              <p className="text-gray-600">
-                Sign up and build your profile. Share your goals, experience, and what you want to learn or teach.
-              </p>
-            </div>
+          <div className="relative">
+            {/* Connector line */}
+            <div className="hidden md:block absolute left-8 top-8 bottom-8 w-px bg-gradient-to-b from-violet-500/40 via-blue-500/20 to-transparent" />
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-white">2</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Find Your Match</h3>
-              <p className="text-gray-600">
-                Browse mentors by expertise, experience, and availability. Find the perfect fit for your goals.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-white">3</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Start Learning</h3>
-              <p className="text-gray-600">
-                Connect with your mentor, set goals, and begin your personalized learning journey.
-              </p>
+            <div className="space-y-6">
+              {[
+                {
+                  step: "01",
+                  color: "violet",
+                  title: "Create Your Profile",
+                  description: "Sign up and build your profile in minutes. Share your goals, experience, and what you want to learn or teach.",
+                  accent: "text-violet-400",
+                  bg: "bg-violet-500/10",
+                  border: "border-violet-500/20",
+                },
+                {
+                  step: "02",
+                  color: "blue",
+                  title: "Find Your Match",
+                  description: "Browse mentors by expertise, industry, and availability. Our smart matching surfaces the best fit for your goals.",
+                  accent: "text-blue-400",
+                  bg: "bg-blue-500/10",
+                  border: "border-blue-500/20",
+                },
+                {
+                  step: "03",
+                  color: "emerald",
+                  title: "Start Growing",
+                  description: "Connect with your mentor, set milestones, and track your progress on a personalized learning journey.",
+                  accent: "text-emerald-400",
+                  bg: "bg-emerald-500/10",
+                  border: "border-emerald-500/20",
+                },
+              ].map((item) => (
+                <div
+                  key={item.step}
+                  className="group relative bg-white/[0.02] border border-white/8 rounded-3xl p-8 pl-8 md:pl-24 hover:border-white/15 transition-all duration-300 flex flex-col md:flex-row md:items-center gap-6"
+                >
+                  <div className={`absolute left-6 top-1/2 -translate-y-1/2 hidden md:flex w-5 h-5 rounded-full ${item.bg} border ${item.border} items-center justify-center ring-4 ring-[#020617]`}>
+                    <div className={`w-2 h-2 rounded-full ${item.bg.replace('/10', '/60')}`} />
+                  </div>
+                  <div className={`text-6xl font-black ${item.accent} opacity-20 leading-none select-none w-20 shrink-0`}>
+                    {item.step}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white mb-2">{item.title}</h3>
+                    <p className="text-white/45 leading-relaxed">{item.description}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Success Stories
+      <section className="relative z-10 py-32 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-white/50 mb-6">
+              <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+              Success stories
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
+              Real results, real people
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              See how TwinPath has helped professionals achieve their career goals
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="p-6">
-              <CardContent className="p-0">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-lg font-bold text-blue-600">JD</span>
-                  </div>
-                  <div>
-                    <div className="font-semibold">John Doe</div>
-                    <div className="text-sm text-gray-600">Software Developer</div>
-                  </div>
-                </div>
-                <p className="text-gray-600 italic">
-                  "TwinPath helped me transition from junior to senior developer in just 6 months. 
-                  My mentor's guidance was invaluable."
-                </p>
-                <div className="flex mt-4">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Zap key={star} className="h-4 w-4 text-yellow-400 fill-current" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                initials: "JD",
+                name: "John Doe",
+                role: "Software Developer",
+                quote: "TwinPath helped me transition from junior to senior developer in just 6 months. My mentor's guidance was absolutely invaluable.",
+                gradient: "from-violet-500/20 to-violet-500/5",
+                textColor: "text-violet-400",
+              },
+              {
+                initials: "SM",
+                name: "Sarah Miller",
+                role: "Product Manager",
+                quote: "The personalized learning approach and real-world insights from my mentor helped me land my dream job at a top-tier company.",
+                gradient: "from-blue-500/20 to-blue-500/5",
+                textColor: "text-blue-400",
+              },
+              {
+                initials: "MC",
+                name: "Mike Chen",
+                role: "Data Scientist & Mentor",
+                quote: "As a mentor I've helped 15+ mentees achieve their goals. TwinPath makes the entire mentorship process seamless and rewarding.",
+                gradient: "from-emerald-500/20 to-emerald-500/5",
+                textColor: "text-emerald-400",
+              },
+            ].map((t) => (
+              <div
+                key={t.name}
+                className={`relative bg-gradient-to-br ${t.gradient} border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-300`}
+              >
+                <div className="flex gap-0.5 mb-6">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="p-6">
-              <CardContent className="p-0">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-lg font-bold text-purple-600">SM</span>
+                <p className="text-white/65 leading-relaxed mb-6 italic">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold ${t.textColor}`}>
+                    {t.initials}
                   </div>
                   <div>
-                    <div className="font-semibold">Sarah Miller</div>
-                    <div className="text-sm text-gray-600">Product Manager</div>
+                    <div className="text-sm font-semibold text-white">{t.name}</div>
+                    <div className="text-xs text-white/40">{t.role}</div>
                   </div>
                 </div>
-                <p className="text-gray-600 italic">
-                  "The personalized learning approach and real-world insights from my mentor 
-                  helped me land my dream job."
-                </p>
-                <div className="flex mt-4">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Zap key={star} className="h-4 w-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="p-6">
-              <CardContent className="p-0">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-lg font-bold text-green-600">MC</span>
-                  </div>
-                  <div>
-                    <div className="font-semibold">Mike Chen</div>
-                    <div className="text-sm text-gray-600">Data Scientist</div>
-                  </div>
-                </div>
-                <p className="text-gray-600 italic">
-                  "As a mentor, I've helped 15+ mentees achieve their goals. TwinPath makes 
-                  the mentorship process seamless and rewarding."
-                </p>
-                <div className="flex mt-4">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Zap key={star} className="h-4 w-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Ready to Transform Your Career?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join thousands of professionals who are already accelerating their growth with TwinPath
-          </p>
-          <Link href="/auth/signin">
-            <Button size="lg" variant="secondary" className="px-8 py-3">
-              Get Started Now
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+      <section className="relative z-10 py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/30 via-purple-600/20 to-blue-600/30 border border-white/15 p-12 md:p-16 text-center">
+            {/* Background glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.2),transparent_70%)]" />
+            <div className="relative z-10">
+              <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+                Ready to transform<br />your career?
+              </h2>
+              <p className="text-white/50 text-lg mb-10 max-w-xl mx-auto">
+                Join thousands of professionals already accelerating their growth with TwinPath. It&apos;s free to get started.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/auth/login">
+                  <Button
+                    size="lg"
+                    className="bg-white text-black hover:bg-white/90 h-12 px-10 text-base font-semibold rounded-xl gap-2"
+                  >
+                    Get started free
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/dashboard">
+                  <Button
+                    size="lg"
+                    variant="ghost"
+                    className="border border-white/15 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 h-12 px-8 text-base rounded-xl"
+                  >
+                    Browse mentors
+                  </Button>
+                </Link>
+              </div>
+              <p className="text-white/25 text-sm mt-6">No credit card required &middot; Free forever plan available</p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
+      <footer className="relative z-10 border-t border-white/[0.06] py-14 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
+            <div className="md:col-span-1">
               <div className="mb-4">
                 <Logo />
               </div>
-              <p className="text-gray-400">
+              <p className="text-white/35 text-sm leading-relaxed">
                 Connecting mentors and mentees to accelerate professional growth worldwide.
               </p>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-4">Platform</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/dashboard" className="hover:text-white">Dashboard</Link></li>
-                <li><Link href="/topics" className="hover:text-white">Topics</Link></li>
-                <li><Link href="/profile" className="hover:text-white">Profile</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">Resources</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="#" className="hover:text-white">Blog</Link></li>
-                <li><Link href="#" className="hover:text-white">Help Center</Link></li>
-                <li><Link href="#" className="hover:text-white">Community</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="#" className="hover:text-white">About</Link></li>
-                <li><Link href="#" className="hover:text-white">Privacy</Link></li>
-                <li><Link href="#" className="hover:text-white">Terms</Link></li>
-              </ul>
-            </div>
+            {[
+              {
+                heading: "Platform",
+                links: [
+                  { label: "Dashboard", href: "/dashboard" },
+                  { label: "Topics", href: "/topics" },
+                  { label: "Profile", href: "/profile" },
+                ],
+              },
+              {
+                heading: "Resources",
+                links: [
+                  { label: "Blog", href: "#" },
+                  { label: "Help Center", href: "#" },
+                  { label: "Community", href: "#" },
+                ],
+              },
+              {
+                heading: "Company",
+                links: [
+                  { label: "About", href: "#" },
+                  { label: "Privacy", href: "#" },
+                  { label: "Terms", href: "#" },
+                ],
+              },
+            ].map((col) => (
+              <div key={col.heading}>
+                <h3 className="text-sm font-semibold text-white/60 mb-4 uppercase tracking-wider">{col.heading}</h3>
+                <ul className="space-y-3">
+                  {col.links.map((link) => (
+                    <li key={link.label}>
+                      <Link href={link.href} className="text-white/35 hover:text-white/70 text-sm transition-colors">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 TwinPath. All rights reserved.</p>
+          <div className="border-t border-white/[0.06] pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-white/25 text-sm">&copy; 2026 TwinPath. All rights reserved.</p>
+            <p className="text-white/20 text-xs">Built for ambitious professionals</p>
           </div>
         </div>
       </footer>
