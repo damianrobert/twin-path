@@ -76,7 +76,7 @@ export default function ReportBlogButton({ postId, postTitle }: ReportBlogButton
 
   if (hasReported) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-sm font-medium bg-white/[0.04] border border-white/10 text-white/40">
         <Flag className="h-4 w-4" />
         <span>Already reported</span>
       </div>
@@ -86,10 +86,13 @@ export default function ReportBlogButton({ postId, postTitle }: ReportBlogButton
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700">
-          <Flag className="h-4 w-4 mr-2" />
-          Report Post
-        </Button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-sm font-medium bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/15 transition-colors"
+        >
+          <Flag className="h-4 w-4" />
+          Report
+        </button>
       </DialogTrigger>
       
       <DialogContent className="sm:max-w-[425px]">

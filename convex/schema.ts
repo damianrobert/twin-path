@@ -373,4 +373,75 @@ export default defineSchema({
   }).index("by_course", ["courseId"])
    .index("by_student", ["studentId"])
    .index("by_course_student", ["courseId", "studentId"]), // For checking if user already reviewed
+
+  // AI-generated learning roadmaps
+  roadmaps: defineTable({
+    userId: v.id("users"),
+    goal: v.string(),
+    title: v.string(),
+    description: v.string(),
+    skillLevel: v.union(
+      v.literal("beginner"),
+      v.literal("some_experience"),
+      v.literal("intermediate"),
+      v.literal("advanced"),
+    ),
+    timeBudget: v.union(
+      v.literal("1-3h"),
+      v.literal("3-5h"),
+      v.literal("5-10h"),
+      v.literal("10+h"),
+    ),
+    learningStyle: v.union(
+      v.literal("video"),
+      v.literal("text"),
+      v.literal("mixed"),
+    ),
+    status: v.union(
+      v.literal("generating"),
+      v.literal("enriching"),
+      v.literal("ready"),
+      v.literal("failed"),
+    ),
+    estimatedWeeks: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_user_created", ["userId", "createdAt"]),
+
+  // Steps within a roadmap (linear order for v1)
+  roadmapSteps: defineTable({
+    roadmapId: v.id("roadmaps"),
+    order: v.number(),
+    title: v.string(),
+    description: v.string(),
+    difficulty: v.union(
+      v.literal("beginner"),
+      v.literal("intermediate"),
+      v.literal("advanced"),
+    ),
+    estimatedHours: v.optional(v.number()),
+    searchQueries: v.array(v.string()), // queries to feed Brave
+    resourcesStatus: v.union(
+      v.literal("pending"),
+      v.literal("ready"),
+      v.literal("failed"),
+    ),
+    completedAt: v.optional(v.number()),
+  }).index("by_roadmap", ["roadmapId"])
+    .index("by_roadmap_order", ["roadmapId", "order"]),
+
+  // Resources (articles / videos) attached to a step
+  roadmapResources: defineTable({
+    stepId: v.id("roadmapSteps"),
+    roadmapId: v.id("roadmaps"),
+    title: v.string(),
+    url: v.string(),
+    description: v.optional(v.string()),
+    type: v.union(v.literal("article"), v.literal("video")),
+    source: v.string(), // domain (e.g. "youtube.com", "dev.to")
+    order: v.number(),
+  }).index("by_step", ["stepId"])
+    .index("by_step_order", ["stepId", "order"])
+    .index("by_roadmap", ["roadmapId"]),
 });

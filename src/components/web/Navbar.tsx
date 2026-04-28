@@ -27,6 +27,7 @@ import {
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Dashboard", href: "/dashboard" },
+  { label: "Roadmaps", href: "/roadmaps" },
   { label: "Blog", href: "/blog" },
   { label: "Courses", href: "/courses" },
   { label: "Find mentor", href: "/mentors" },

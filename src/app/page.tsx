@@ -17,6 +17,12 @@ import {
   TrendingUp,
   CheckCircle2,
   Zap,
+  Map as MapIcon,
+  Wand2,
+  Play,
+  FileText,
+  Clock,
+  Check,
 } from "lucide-react";
 import Logo from "@/components/web/Logo";
 import { useQuery } from "convex/react";
@@ -281,6 +287,180 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* AI Roadmap Spotlight */}
+      <section className="relative z-10 py-32 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-4 py-1.5 text-sm text-violet-300 mb-6 backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              New · AI-powered
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
+              Your personal{" "}
+              <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                learning roadmap
+              </span>
+            </h2>
+            <p className="text-white/40 mt-4 text-lg max-w-2xl mx-auto">
+              Tell AI your goal. Get a step-by-step plan with curated articles, videos, and tutorials — all hand-picked for how you learn.
+            </p>
+          </div>
+
+          <div className="relative bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-blue-500/10 border border-white/10 rounded-3xl overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.12),transparent_60%)]" />
+
+            <div className="relative grid lg:grid-cols-2 gap-10 p-8 md:p-12">
+              {/* Left: copy */}
+              <div className="flex flex-col justify-center">
+                <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-white/60 mb-6 w-fit">
+                  <MapIcon className="h-3 w-3 text-violet-400" />
+                  AI Roadmaps
+                </div>
+                <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
+                  From &ldquo;I want to learn X&rdquo; to a concrete plan in seconds.
+                </h3>
+                <p className="text-white/50 leading-relaxed mb-6">
+                  Describe what you want to become — a DevOps engineer, an ML researcher, a fullstack dev — and TwinPath generates a personalized roadmap with real resources from across the web.
+                </p>
+
+                <ul className="space-y-3 mb-8">
+                  {[
+                    { icon: Wand2, text: "8-14 structured steps tailored to your skill level" },
+                    { icon: BookOpen, text: "Real articles & videos — no hallucinated links" },
+                    { icon: CheckCircle2, text: "Track progress with per-step completion" },
+                    { icon: Clock, text: "Paced around your weekly time budget" },
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-white/60">
+                      <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                        <item.icon className="h-3.5 w-3.5 text-violet-300" />
+                      </div>
+                      <span className="pt-1">{item.text}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link href="/roadmaps/create">
+                    <Button
+                      size="lg"
+                      className="bg-white text-black hover:bg-white/90 h-11 px-6 text-sm font-semibold rounded-xl gap-2 w-full sm:w-auto"
+                    >
+                      <Wand2 className="h-4 w-4" />
+                      Create your roadmap
+                    </Button>
+                  </Link>
+                  <Link href="/roadmaps">
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      className="border border-white/15 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 h-11 px-6 text-sm rounded-xl w-full sm:w-auto"
+                    >
+                      See examples
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right: mock preview */}
+              <div className="relative">
+                <div className="relative bg-[#0b0f1a]/60 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
+                  {/* Mock header */}
+                  <div className="flex items-center gap-2 pb-4 border-b border-white/[0.06] mb-4">
+                    <div className="w-2 h-2 rounded-full bg-rose-500/60" />
+                    <div className="w-2 h-2 rounded-full bg-amber-500/60" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
+                    <p className="text-xs text-white/35 ml-2 truncate">
+                      Become a DevOps Engineer
+                    </p>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] text-white/35 font-medium uppercase tracking-wider">Progress</span>
+                      <span className="text-xs font-semibold text-white/60">33%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div className="h-full w-1/3 bg-gradient-to-r from-violet-500 to-blue-500 rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Steps */}
+                  <div className="relative">
+                    <div className="absolute left-[18px] top-6 bottom-6 w-px bg-gradient-to-b from-emerald-500/30 via-white/10 to-white/5" />
+                    <div className="space-y-3">
+                      {/* Step 1 - completed */}
+                      <div className="relative pl-12">
+                        <div className="absolute left-0 top-3 w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center justify-center ring-4 ring-[#0b0f1a]">
+                          <Check className="h-4 w-4" />
+                        </div>
+                        <div className="bg-white/[0.03] border border-emerald-500/15 rounded-xl p-3 opacity-70">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-sm font-semibold text-white/60 line-through">Master Linux Fundamentals</p>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">Done</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 2 - active */}
+                      <div className="relative pl-12">
+                        <div className="absolute left-0 top-3 w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/25 text-violet-300 flex items-center justify-center ring-4 ring-[#0b0f1a]">
+                          <span className="text-xs font-bold">02</span>
+                        </div>
+                        <div className="bg-white/[0.05] border border-white/15 rounded-xl p-3">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-sm font-semibold text-white">CI/CD with GitHub Actions</p>
+                          </div>
+                          <div className="flex gap-1.5 mb-3">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">Intermediate</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-white/50">15h</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                              <div className="w-5 h-5 rounded bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                                <Play className="h-2.5 w-2.5 text-rose-300" />
+                              </div>
+                              <p className="text-[11px] text-white/65 truncate flex-1">GitHub Actions in 15 minutes</p>
+                              <span className="text-[10px] text-white/25">youtube.com</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                              <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                                <FileText className="h-2.5 w-2.5 text-blue-300" />
+                              </div>
+                              <p className="text-[11px] text-white/65 truncate flex-1">Building your first CI/CD pipeline</p>
+                              <span className="text-[10px] text-white/25">dev.to</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 3 - upcoming */}
+                      <div className="relative pl-12">
+                        <div className="absolute left-0 top-3 w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 text-white/35 flex items-center justify-center ring-4 ring-[#0b0f1a]">
+                          <span className="text-xs font-bold">03</span>
+                        </div>
+                        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3">
+                          <p className="text-sm font-semibold text-white/55 mb-1.5">Containerize with Docker</p>
+                          <div className="flex gap-1.5">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400">Advanced</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-white/50">25h</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating label */}
+                <div className="absolute -top-3 -right-3 bg-violet-500/15 border border-violet-500/30 backdrop-blur-md rounded-full px-3 py-1 text-[10px] font-semibold text-violet-200 uppercase tracking-wider shadow-lg">
+                  Live preview
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
       <section className="relative z-10 py-32 px-4">
         <div className="max-w-4xl mx-auto">
@@ -476,8 +656,9 @@ export default function LandingPage() {
                 heading: "Platform",
                 links: [
                   { label: "Dashboard", href: "/dashboard" },
+                  { label: "AI Roadmaps", href: "/roadmaps" },
+                  { label: "Courses", href: "/courses" },
                   { label: "Topics", href: "/topics" },
-                  { label: "Profile", href: "/profile" },
                 ],
               },
               {
