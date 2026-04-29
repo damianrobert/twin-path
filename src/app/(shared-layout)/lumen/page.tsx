@@ -19,6 +19,8 @@ import {
   ChevronRight,
   Loader2,
   Palette,
+  Maximize2,
+  X,
 } from "lucide-react";
 import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -100,29 +102,93 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
 function CanvasOutput({ code }: { code: string }) {
   const [loaded, setLoaded] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const html = useMemo(() => buildSandboxHTML(code), [code]);
 
+  // Close on Escape
+  useEffect(() => {
+    if (!fullscreen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [fullscreen]);
+
+  const frame = (
+    <iframe
+      srcDoc={html}
+      sandbox="allow-scripts"
+      onLoad={() => setLoaded(true)}
+      className="w-full h-full border-0"
+      title="Lumen Canvas"
+    />
+  );
+
   return (
-    <div
-      className="relative w-full rounded-2xl overflow-hidden border border-white/10 bg-[#0a0e1a]"
-      style={{ height: 600 }}
-    >
-      {!loaded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0e1a] z-10 gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
-            <Palette className="h-4 w-4 text-white" />
+    <>
+      {/* Inline canvas */}
+      <div
+        className="relative w-full rounded-2xl overflow-hidden border border-white/10 bg-[#0a0e1a]"
+        style={{ height: 780 }}
+      >
+        {!loaded && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0e1a] z-10 gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+              <Palette className="h-4 w-4 text-white" />
+            </div>
+            <p className="text-white/40 text-xs">Building canvas…</p>
           </div>
-          <p className="text-white/40 text-xs">Building canvas…</p>
+        )}
+        {frame}
+        {loaded && (
+          <button
+            onClick={() => setFullscreen(true)}
+            className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/50 hover:bg-black/70 border border-white/10 hover:border-white/20 rounded-lg text-white/50 hover:text-white text-xs transition-all backdrop-blur-sm"
+          >
+            <Maximize2 className="h-3 w-3" />
+            Fullscreen
+          </button>
+        )}
+      </div>
+
+      {/* Fullscreen modal */}
+      {fullscreen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setFullscreen(false);
+          }}
+        >
+          <div className="relative w-full h-full max-w-[1400px] max-h-[90vh] rounded-2xl overflow-hidden border border-white/10 bg-[#0a0e1a] flex flex-col">
+            {/* Modal header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-white/8 bg-white/[0.02]">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center">
+                  <Palette className="h-3 w-3 text-white" />
+                </div>
+                <span className="text-white/60 text-xs font-medium">Lumen Canvas</span>
+              </div>
+              <button
+                onClick={() => setFullscreen(false)}
+                className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {/* Full-size iframe */}
+            <div className="flex-1 min-h-0">
+              <iframe
+                srcDoc={html}
+                sandbox="allow-scripts"
+                className="w-full h-full border-0"
+                title="Lumen Canvas Fullscreen"
+              />
+            </div>
+          </div>
         </div>
       )}
-      <iframe
-        srcDoc={html}
-        sandbox="allow-scripts"
-        onLoad={() => setLoaded(true)}
-        className="w-full h-full border-0"
-        title="Lumen Canvas"
-      />
-    </div>
+    </>
   );
 }
 
