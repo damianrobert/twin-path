@@ -374,6 +374,23 @@ export default defineSchema({
    .index("by_student", ["studentId"])
    .index("by_course_student", ["courseId", "studentId"]), // For checking if user already reviewed
 
+  // Lumen AI chat sessions (cloud-synced per user)
+  lumenSessions: defineTable({
+    userId: v.id("users"),
+    clientId: v.string(), // local uid used as the session's identity on the client
+    title: v.string(),
+    messages: v.array(v.object({
+      id: v.string(),
+      role: v.union(v.literal("user"), v.literal("model")),
+      content: v.string(),
+      canvasType: v.optional(v.union(v.literal("component"), v.literal("markdown"))),
+      timestamp: v.number(),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_user_clientid", ["userId", "clientId"]),
+
   // AI-generated learning roadmaps
   roadmaps: defineTable({
     userId: v.id("users"),

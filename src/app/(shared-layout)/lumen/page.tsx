@@ -20,6 +20,8 @@ import {
   Loader2,
   Palette,
 } from "lucide-react";
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -539,42 +541,115 @@ function CanvasWelcome({ onPrompt }: { onPrompt: (p: string) => void }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LumenPage() {
+  const { isAuthenticated } = useConvexAuth();
+  const convexSessions = useQuery(
+    api.lumen.getSessions,
+    isAuthenticated ? {} : "skip"
+  );
+  const syncSessionMutation = useMutation(api.lumen.syncSession);
+  const deleteSessionMutation = useMutation(api.lumen.deleteSession);
+
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mode, setMode] = useState<Mode>("chat");
+  const [convexLoaded, setConvexLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Load sessions: Convex when authenticated, localStorage otherwise
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const storedId = localStorage.getItem(CURRENT_KEY);
-      if (stored) {
-        const parsed: ChatSession[] = JSON.parse(stored);
-        setSessions(parsed);
-        if (storedId && parsed.find((s) => s.id === storedId)) {
+    if (!isAuthenticated) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const storedId = localStorage.getItem(CURRENT_KEY);
+        if (stored) {
+          const parsed: ChatSession[] = JSON.parse(stored);
+          setSessions(parsed);
+          if (storedId && parsed.find((s) => s.id === storedId)) {
+            setCurrentId(storedId);
+          } else if (parsed.length > 0) {
+            setCurrentId(parsed[0].id);
+          }
+        }
+      } catch {
+        // ignore storage errors
+      }
+      return;
+    }
+
+    // Authenticated: wait for Convex data
+    if (convexSessions === undefined) return; // still loading
+
+    if (!convexLoaded) {
+      setConvexLoaded(true);
+      if (convexSessions && convexSessions.length > 0) {
+        setSessions(convexSessions as ChatSession[]);
+        // Restore last-used session id from localStorage if still valid
+        const storedId = localStorage.getItem(CURRENT_KEY);
+        if (storedId && convexSessions.find((s) => s.id === storedId)) {
           setCurrentId(storedId);
-        } else if (parsed.length > 0) {
-          setCurrentId(parsed[0].id);
+        } else {
+          setCurrentId(convexSessions[0].id);
+        }
+      } else {
+        // No cloud sessions — try to migrate from localStorage
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed: ChatSession[] = JSON.parse(stored);
+            if (parsed.length > 0) {
+              setSessions(parsed);
+              const storedId = localStorage.getItem(CURRENT_KEY);
+              if (storedId && parsed.find((s) => s.id === storedId)) {
+                setCurrentId(storedId);
+              } else {
+                setCurrentId(parsed[0].id);
+              }
+              // Upload to Convex
+              for (const s of parsed) {
+                syncSessionMutation({
+                  clientId: s.id,
+                  title: s.title,
+                  messages: s.messages.map((m) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    canvasType:
+                      m.canvasType === "loading" ? undefined : m.canvasType,
+                    timestamp: m.timestamp,
+                  })),
+                  createdAt: s.createdAt,
+                  updatedAt: s.updatedAt,
+                }).catch(() => {});
+              }
+            }
+          }
+        } catch {
+          // ignore
         }
       }
-    } catch {
-      // ignore storage errors
     }
-  }, []);
+  }, [isAuthenticated, convexSessions, convexLoaded, syncSessionMutation]);
 
+  // Persist to localStorage for unauthenticated users
   useEffect(() => {
+    if (isAuthenticated) return;
     if (sessions.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
     }
     if (currentId) {
       localStorage.setItem(CURRENT_KEY, currentId);
     }
-  }, [sessions, currentId]);
+  }, [isAuthenticated, sessions, currentId]);
+
+  // Keep currentId in localStorage so we can restore it after login
+  useEffect(() => {
+    if (currentId) localStorage.setItem(CURRENT_KEY, currentId);
+  }, [currentId]);
 
   const currentSession = sessions.find((s) => s.id === currentId) ?? null;
 
@@ -620,9 +695,37 @@ export default function LumenPage() {
         }
         return next;
       });
+      if (isAuthenticated) {
+        deleteSessionMutation({ clientId: id }).catch(() => {});
+      }
     },
-    [currentId]
+    [currentId, isAuthenticated, deleteSessionMutation]
   );
+
+  // Sync active session to Convex after a response finishes
+  const prevStreaming = useRef(false);
+  useEffect(() => {
+    if (prevStreaming.current && !streaming && isAuthenticated && currentId) {
+      const session = sessions.find((s) => s.id === currentId);
+      if (session) {
+        syncSessionMutation({
+          clientId: session.id,
+          title: session.title,
+          messages: session.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            canvasType:
+              m.canvasType === "loading" ? undefined : m.canvasType,
+            timestamp: m.timestamp,
+          })),
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+        }).catch(() => {});
+      }
+    }
+    prevStreaming.current = streaming;
+  }, [streaming, isAuthenticated, currentId, sessions, syncSessionMutation]);
 
   // ── Chat send ──────────────────────────────────────────────────────────────
 

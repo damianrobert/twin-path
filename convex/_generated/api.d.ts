@@ -16,6 +16,7 @@ import type * as courseModules from "../courseModules.js";
 import type * as courses from "../courses.js";
 import type * as emergency from "../emergency.js";
 import type * as http from "../http.js";
+import type * as lumen from "../lumen.js";
 import type * as mentorshipRequests from "../mentorshipRequests.js";
 import type * as mentorships from "../mentorships.js";
 import type * as messages from "../messages.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   courses: typeof courses;
   emergency: typeof emergency;
   http: typeof http;
+  lumen: typeof lumen;
   mentorshipRequests: typeof mentorshipRequests;
   mentorships: typeof mentorships;
   messages: typeof messages;
