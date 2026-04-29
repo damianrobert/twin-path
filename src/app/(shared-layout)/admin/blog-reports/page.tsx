@@ -3,23 +3,19 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
+import {
+  AlertTriangle,
+  CheckCircle,
+  Eye,
   Clock,
   User,
   FileText,
   MessageSquare,
-  Flag
+  Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "../../../../../convex/_generated/dataModel";
@@ -36,31 +32,23 @@ interface Report {
   reviewNotes?: string;
   createdAt: number;
   reviewedAt?: number;
-  reporter?: {
-    name: string;
-    email: string;
-  };
+  reporter?: { name: string; email: string };
   post?: {
     title: string;
     slug: string;
-    author?: {
-      name: string;
-      email: string;
-    };
+    author?: { name: string; email: string };
   };
-  reviewer?: {
-    name: string;
-  };
+  reviewer?: { name: string };
 }
 
-const statusColors = {
-  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  reviewed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  resolved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  dismissed: "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-300",
+const statusStyles: Record<string, string> = {
+  pending: "bg-amber-500/15 border-amber-500/25 text-amber-300",
+  reviewed: "bg-blue-500/15 border-blue-500/25 text-blue-300",
+  resolved: "bg-emerald-500/15 border-emerald-500/25 text-emerald-300",
+  dismissed: "bg-white/8 border-white/15 text-white/40",
 };
 
-const reasonLabels = {
+const reasonLabels: Record<string, string> = {
   inappropriate_content: "Inappropriate Content",
   spam: "Spam",
   harassment: "Harassment",
@@ -78,8 +66,7 @@ export default function BlogReportsPage() {
 
   const reports = useQuery(api.blogReports.getPendingReports) || [];
   const updateReportStatus = useMutation(api.blogReports.updateReportStatus);
-  
-  // Handle admin access errors
+
   useConvexErrorHandler();
 
   const handleReview = async () => {
@@ -87,154 +74,161 @@ export default function BlogReportsPage() {
       toast.error("Please select a status");
       return;
     }
-
     try {
       await updateReportStatus({
         reportId: selectedReport._id,
         status: reviewStatus as any,
         reviewNotes: reviewNotes.trim() || undefined,
       });
-
       toast.success("Report status updated successfully");
       setReviewDialogOpen(false);
       setSelectedReport(null);
       setReviewStatus("");
       setReviewNotes("");
     } catch (error) {
-      console.error("Error updating report:", error);
       toast.error("Failed to update report status");
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString();
-  };
+  const formatDate = (timestamp: number) =>
+    new Date(timestamp).toLocaleString();
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <AlertTriangle className="h-8 w-8 text-orange-600" />
-          Blog Reports Management
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <p className="text-white/35 text-xs font-semibold uppercase tracking-widest mb-2">
+          Moderation
+        </p>
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <AlertTriangle className="h-6 w-6 text-amber-400" />
+          Blog Reports
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-white/40 text-sm mt-1">
           Review and manage user-reported blog posts
         </p>
       </div>
 
       {reports.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Pending Reports</h3>
-            <p className="text-muted-foreground">
-              All blog reports have been reviewed. Great job!
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-12 text-center">
+          <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-6 w-6 text-emerald-400" />
+          </div>
+          <h3 className="text-white font-semibold mb-2">No Pending Reports</h3>
+          <p className="text-white/35 text-sm">All blog reports have been reviewed. Great job!</p>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {reports.map((report) => (
-            <Card key={report._id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className={statusColors[report.status]}>
-                        {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-                      </Badge>
-                      <Badge variant="outline">
-                        {reasonLabels[report.reason as keyof typeof reasonLabels]}
-                      </Badge>
-                    </div>
-                    <h3 className="font-semibold text-lg">
-                      Report for: "{report.post?.title}"
-                    </h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        Reported by: {report.reporter?.name}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {formatDate(report.createdAt)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(`/blog/${report.post?.slug}`, '_blank')}
+            <div
+              key={report._id}
+              className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 hover:border-white/20 transition-all"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`px-2.5 py-0.5 border rounded-full text-xs font-medium ${statusStyles[report.status]}`}
                     >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Post
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setSelectedReport(report);
-                        setReviewDialogOpen(true);
-                      }}
-                    >
-                      Review
-                    </Button>
+                      {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                    </span>
+                    <span className="px-2.5 py-0.5 bg-white/5 border border-white/10 text-white/45 text-xs rounded-full">
+                      {reasonLabels[report.reason as keyof typeof reasonLabels]}
+                    </span>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+
+                  <h3 className="font-semibold text-white">
+                    Report for: &ldquo;{report.post?.title}&rdquo;
+                  </h3>
+
+                  <div className="flex items-center gap-4 text-xs text-white/40 flex-wrap">
+                    <span className="flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5" />
+                      Reported by: {report.reporter?.name}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      {formatDate(report.createdAt)}
+                    </span>
+                  </div>
+
                   <div>
-                    <h4 className="font-medium mb-2 flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Reporter Message:
-                    </h4>
-                    <p className="text-sm bg-muted p-3 rounded-lg">
+                    <p className="text-xs text-white/35 flex items-center gap-1.5 mb-1.5">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Reporter message:
+                    </p>
+                    <p className="text-sm text-white/55 bg-white/5 border border-white/8 rounded-xl px-3 py-2">
                       {report.message}
                     </p>
                   </div>
-                  
+
                   {report.post?.author && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <FileText className="h-4 w-4" />
+                    <p className="flex items-center gap-1.5 text-xs text-white/35">
+                      <FileText className="h-3.5 w-3.5" />
                       Post author: {report.post.author.name} ({report.post.author.email})
-                    </div>
+                    </p>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => window.open(`/blog/${report.post?.slug}`, "_blank")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-white/55 hover:text-white hover:bg-white/10 rounded-xl text-xs font-medium transition-colors"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    View Post
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedReport(report);
+                      setReviewDialogOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 rounded-xl text-xs font-medium transition-colors"
+                  >
+                    <Flag className="h-3.5 w-3.5" />
+                    Review
+                  </button>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
 
       {/* Review Dialog */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[480px] bg-[oklch(0.129_0.042_264.695)] border border-white/10">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Flag className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <Flag className="h-5 w-5 text-violet-400" />
               Review Report
             </DialogTitle>
-            <DialogDescription>
-              Review the report for "{selectedReport?.post?.title}" and update its status.
+            <DialogDescription className="text-white/45">
+              Review the report for &ldquo;{selectedReport?.post?.title}&rdquo; and update its status.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedReport && (
             <div className="space-y-4">
-              <div className="bg-muted p-3 rounded-lg">
-                <h4 className="font-medium mb-2">Report Details:</h4>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Reason:</strong> {reasonLabels[selectedReport.reason as keyof typeof reasonLabels]}</p>
-                  <p><strong>Reporter:</strong> {selectedReport.reporter?.name}</p>
-                  <p><strong>Message:</strong> {selectedReport.message}</p>
-                </div>
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1.5 text-sm">
+                <p className="text-white/40">
+                  <span className="text-white/60 font-medium">Reason:</span>{" "}
+                  {reasonLabels[selectedReport.reason as keyof typeof reasonLabels]}
+                </p>
+                <p className="text-white/40">
+                  <span className="text-white/60 font-medium">Reporter:</span>{" "}
+                  {selectedReport.reporter?.name}
+                </p>
+                <p className="text-white/40">
+                  <span className="text-white/60 font-medium">Message:</span>{" "}
+                  {selectedReport.message}
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="status">Update Status *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-white/60 text-xs">Update Status *</Label>
                 <Select value={reviewStatus} onValueChange={setReviewStatus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white">
                     <SelectValue placeholder="Select new status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -245,36 +239,33 @@ export default function BlogReportsPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Review Notes</Label>
+              <div className="space-y-1.5">
+                <Label className="text-white/60 text-xs">Review Notes</Label>
                 <Textarea
-                  id="notes"
                   placeholder="Add notes about your review decision..."
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}
                   maxLength={500}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/25 resize-none"
                 />
-                <p className="text-xs text-muted-foreground">
-                  {reviewNotes.length}/500 characters
-                </p>
+                <p className="text-xs text-white/30">{reviewNotes.length}/500 characters</p>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
+              <div className="flex gap-3 pt-1">
+                <button
                   onClick={() => setReviewDialogOpen(false)}
-                  className="flex-1"
+                  className="flex-1 h-9 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 rounded-xl text-sm font-medium transition-colors"
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={handleReview}
                   disabled={!reviewStatus}
-                  className="flex-1"
+                  className="flex-1 h-9 bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-sm font-semibold transition-colors"
                 >
                   Update Status
-                </Button>
+                </button>
               </div>
             </div>
           )}

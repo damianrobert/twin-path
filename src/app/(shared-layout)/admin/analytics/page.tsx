@@ -3,37 +3,30 @@
 import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Users, 
-  TrendingUp, 
-  MessageSquare, 
-  BookOpen, 
-  Shield, 
+import {
+  Users,
+  TrendingUp,
+  MessageSquare,
+  BookOpen,
   Clock,
   Eye,
   Heart,
   BarChart3,
-  PieChart,
   Activity,
   Calendar,
   Target,
   Award,
   AlertTriangle,
-  Headphones
+  Headphones,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useConvexErrorHandler } from "../../../../hooks/useConvexErrorHandler";
 
 export default function AdminAnalyticsPage() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "all">("30d");
-  
-  // Handle admin access errors
+
   useConvexErrorHandler();
 
-  // Fetch data for analytics
   const allUsers = useQuery(api.admin.getAllUsers) || [];
   const adminUsers = useQuery(api.admin.getAdminUsers) || [];
   const allPosts = useQuery(api.posts.getAllPosts) || [];
@@ -43,16 +36,12 @@ export default function AdminAnalyticsPage() {
   const allTopics = useQuery(api.topics.getAllTopics) || [];
   const supportStats = useQuery(api.supportCases.getSupportCaseStatistics);
 
-  // Calculate analytics
   const totalUsers = allUsers.length;
   const totalAdmins = adminUsers.length;
   const totalPosts = allPosts.length;
   const totalMentorships = allMentorships.length;
   const totalMessages = allMessages.length;
-  const totalReports = allReports.length;
   const totalTopics = allTopics.length;
-
-  // Support case analytics
   const totalCases = supportStats?.total || 0;
   const openCases = supportStats?.opened || 0;
   const inProgressCases = supportStats?.inProgress || 0;
@@ -60,52 +49,54 @@ export default function AdminAnalyticsPage() {
   const closedCases = supportStats?.closed || 0;
   const urgentCases = supportStats?.byPriority?.urgent || 0;
 
-  // User role distribution
-  const mentors = allUsers.filter(user => user.role === "mentor" || user.role === "both").length;
-  const mentees = allUsers.filter(user => user.role === "mentee" || user.role === "both").length;
-  const bothRoles = allUsers.filter(user => user.role === "both").length;
+  const mentors = allUsers.filter((u) => u.role === "mentor" || u.role === "both").length;
+  const mentees = allUsers.filter((u) => u.role === "mentee" || u.role === "both").length;
+  const bothRoles = allUsers.filter((u) => u.role === "both").length;
 
-  // Mentorship stats
-  const activeMentorships = allMentorships.filter(m => m.status === "active").length;
-  const pendingMentorships = allMentorships.filter(m => m.status === "pending").length;
-  const completedMentorships = allMentorships.filter(m => m.status === "completed").length;
+  const activeMentorships = allMentorships.filter((m) => m.status === "active").length;
+  const pendingMentorships = allMentorships.filter((m) => m.status === "pending").length;
+  const completedMentorships = allMentorships.filter((m) => m.status === "completed").length;
 
-  // Report stats (using pending reports as we don't have all reports)
-  const pendingReports = allReports.length;
-  const resolvedReports = 0; // Would need additional query
-  const dismissedReports = 0; // Would need additional query
-
-  // Post stats
-  const publishedPosts = allPosts.filter(p => p.status === "published").length;
-  const draftPosts = allPosts.filter(p => p.status === "draft").length;
-  
-  // Calculate engagement metrics
-  const totalLikes = allPosts.reduce((sum, post) => sum + (post.likeCount || 0), 0);
-  const totalViews = allPosts.reduce((sum, post) => sum + (post.viewCount || 0), 0);
+  const publishedPosts = allPosts.filter((p) => p.status === "published").length;
+  const draftPosts = allPosts.filter((p) => p.status === "draft").length;
+  const totalLikes = allPosts.reduce((s, p) => s + (p.likeCount || 0), 0);
+  const totalViews = allPosts.reduce((s, p) => s + (p.viewCount || 0), 0);
   const avgLikesPerPost = totalPosts > 0 ? (totalLikes / totalPosts).toFixed(1) : "0";
   const avgViewsPerPost = totalPosts > 0 ? (totalViews / totalPosts).toFixed(1) : "0";
 
-  // Recent activity (last 7 days)
-  const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-  const recentUsers = allUsers.filter(user => user.createdAt > sevenDaysAgo).length;
-  const recentPosts = allPosts.filter(post => post.createdAt > sevenDaysAgo).length;
-  const recentMentorships = allMentorships.filter(m => m.createdAt > sevenDaysAgo).length;
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recentUsers = allUsers.filter((u) => u.createdAt > sevenDaysAgo).length;
+  const recentPosts = allPosts.filter((p) => p.createdAt > sevenDaysAgo).length;
+  const monthlyUsers = allUsers.filter((u) => u.createdAt > thirtyDaysAgo).length;
+  const monthlyPosts = allPosts.filter((p) => p.createdAt > thirtyDaysAgo).length;
+  const monthlyMentorships = allMentorships.filter((m) => m.createdAt > thirtyDaysAgo).length;
 
-  // Additional analytics
-  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-  const monthlyUsers = allUsers.filter(user => user.createdAt > thirtyDaysAgo).length;
-  const monthlyPosts = allPosts.filter(post => post.createdAt > thirtyDaysAgo).length;
-  const monthlyMentorships = allMentorships.filter(m => m.createdAt > thirtyDaysAgo).length;
-
-  // User engagement metrics
-  const usersWithPosts = new Set(allPosts.map(p => p.authorId)).size;
+  const usersWithPosts = new Set(allPosts.map((p) => p.authorId)).size;
   const usersInMentorships = new Set([
-    ...allMentorships.map(m => m.mentorId),
-    ...allMentorships.map(m => m.menteeId)
+    ...allMentorships.map((m) => m.mentorId),
+    ...allMentorships.map((m) => m.menteeId),
   ]).size;
   const activeUsers = usersWithPosts + usersInMentorships;
 
-  // Content performance metrics
+  const successRate =
+    totalMentorships > 0
+      ? ((completedMentorships / totalMentorships) * 100).toFixed(1)
+      : "0";
+
+  const completedWithDuration = allMentorships.filter(
+    (m: any) => m.status === "completed" && m.completedAt && m.createdAt
+  );
+  const avgMentorshipDuration =
+    completedWithDuration.length > 0
+      ? completedWithDuration.reduce((s: number, m: any) => s + (m.completedAt - m.createdAt), 0) /
+        completedWithDuration.length
+      : 0;
+
+  const avgDailyUsers = monthlyUsers / 30;
+  const avgDailyPosts = monthlyPosts / 30;
+  const avgDailyMentorships = monthlyMentorships / 30;
+
   const mostLikedPosts = [...allPosts]
     .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
     .slice(0, 5);
@@ -113,77 +104,83 @@ export default function AdminAnalyticsPage() {
     .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
     .slice(0, 5);
 
-  // Mentorship success metrics
-  const successRate = totalMentorships > 0 
-    ? ((completedMentorships / totalMentorships) * 100).toFixed(1) 
-    : "0";
-  
-  const completedMentorshipsWithDuration = allMentorships.filter(
-    (m: any) => m.status === "completed" && m.completedAt && m.createdAt
-  );
-  
-  const avgMentorshipDuration = completedMentorshipsWithDuration.length > 0
-    ? completedMentorshipsWithDuration.reduce(
-        (sum: number, m: any) => sum + (m.completedAt - m.createdAt), 
-        0
-      ) / completedMentorshipsWithDuration.length
-    : 0;
-
-  // Time-based activity patterns
-  const postsByDay = allPosts.reduce((acc, post) => {
-    const day = new Date(post.createdAt).toLocaleDateString();
+  const postsByDay = allPosts.reduce((acc, p) => {
+    const day = new Date(p.createdAt).toLocaleDateString();
     acc[day] = (acc[day] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const usersByDay = allUsers.reduce((acc, user) => {
-    const day = new Date(user.createdAt).toLocaleDateString();
+  const usersByDay = allUsers.reduce((acc, u) => {
+    const day = new Date(u.createdAt).toLocaleDateString();
     acc[day] = (acc[day] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  // Platform growth metrics
-  const avgDailyUsers = monthlyUsers / 30;
-  const avgDailyPosts = monthlyPosts / 30;
-  const avgDailyMentorships = monthlyMentorships / 30;
-
-  // User retention metrics
-  const oldestUsers = allUsers
-    .filter(user => user.createdAt < thirtyDaysAgo)
-    .sort((a, b) => a.createdAt - b.createdAt)
-    .slice(0, 10);
-
-  // Content categories (if topics are available)
-  const topicDistribution = allTopics.length > 0 ? allTopics.slice(0, 10) : [];
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString();
-  };
-
+  const formatDate = (ts: number) => new Date(ts).toLocaleDateString();
   const formatDuration = (ms: number) => {
     const days = Math.floor(ms / (1000 * 60 * 60 * 24));
     if (days < 30) return `${days} days`;
-    const months = Math.floor(days / 30);
-    return `${months} month${months > 1 ? 's' : ''}`;
+    return `${Math.floor(days / 30)} month${Math.floor(days / 30) !== 1 ? "s" : ""}`;
   };
+
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5">
+      <p className="text-white font-semibold text-sm mb-4">{title}</p>
+      {children}
+    </div>
+  );
+
+  const StatRow = ({
+    label,
+    value,
+    accent,
+    badge,
+  }: {
+    label: string;
+    value: React.ReactNode;
+    accent?: string;
+    badge?: string;
+  }) => (
+    <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+      <div className="flex items-center gap-2">
+        {accent && (
+          <div className={`w-2 h-2 rounded-full ${accent}`} />
+        )}
+        <span className="text-sm text-white/60">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-white text-sm">{value}</span>
+        {badge && (
+          <span className="px-2 py-0.5 bg-white/5 border border-white/10 text-white/35 text-xs rounded-full">
+            {badge}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" />
+          <p className="text-white/35 text-xs font-semibold uppercase tracking-widest mb-2">
+            Insights
+          </p>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-violet-400" />
             Platform Analytics
           </h1>
-          <p className="text-muted-foreground">
-            Comprehensive insights into platform performance and user engagement
+          <p className="text-white/40 text-sm mt-1">
+            Comprehensive insights into platform performance
           </p>
         </div>
-        
-        <Select value={timeRange} onValueChange={(value: "7d" | "30d" | "90d" | "all") => setTimeRange(value)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time range" />
+        <Select
+          value={timeRange}
+          onValueChange={(v: "7d" | "30d" | "90d" | "all") => setTimeRange(v)}
+        >
+          <SelectTrigger className="w-[160px] bg-white/5 border-white/10 text-white/70">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="7d">Last 7 days</SelectItem>
@@ -194,638 +191,279 @@ export default function AdminAnalyticsPage() {
         </Select>
       </div>
 
-      {/* Enhanced Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3" />
-              <span>+{recentUsers} this week</span>
+      {/* Overview stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {[
+          {
+            label: "Total Users",
+            value: totalUsers,
+            sub: `+${recentUsers} this week`,
+            icon: Users,
+            accent: "text-blue-400",
+          },
+          {
+            label: "Blog Posts",
+            value: totalPosts,
+            sub: `${totalLikes.toLocaleString()} likes`,
+            icon: BookOpen,
+            accent: "text-violet-400",
+          },
+          {
+            label: "Mentorships",
+            value: totalMentorships,
+            sub: `${activeMentorships} active`,
+            icon: Target,
+            accent: "text-emerald-400",
+          },
+          {
+            label: "Messages",
+            value: totalMessages,
+            sub: `${usersInMentorships} participants`,
+            icon: MessageSquare,
+            accent: "text-amber-400",
+          },
+          {
+            label: "Support Cases",
+            value: totalCases,
+            sub: `${openCases} need attention`,
+            icon: Headphones,
+            accent: "text-red-400",
+          },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div
+              key={s.label}
+              className="bg-white/[0.03] border border-white/10 rounded-2xl p-4"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white/40 text-xs">{s.label}</span>
+                <Icon className="h-3.5 w-3.5 text-white/20" />
+              </div>
+              <div className={`text-2xl font-bold ${s.accent} mb-1`}>{s.value}</div>
+              <div className="text-xs text-white/30">{s.sub}</div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-              <Calendar className="h-3 w-3" />
-              <span>+{monthlyUsers} this month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Blog Posts</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPosts}</div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3" />
-              <span>+{recentPosts} this week</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-              <Heart className="h-3 w-3" />
-              <span>{totalLikes.toLocaleString()} total likes</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mentorships</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalMentorships}</div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Activity className="h-3 w-3" />
-              <span>{activeMentorships} active</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-              <Award className="h-3 w-3" />
-              <span>{successRate}% success rate</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Messages</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalMessages}</div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>Total sent</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-              <Users className="h-3 w-3" />
-              <span>{usersInMentorships} participants</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Support Cases</CardTitle>
-            <Headphones className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCases}</div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <AlertTriangle className="h-3 w-3 text-red-500" />
-              <span>{openCases} need attention</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-              <Award className="h-3 w-3" />
-              <span>{resolvedCases} resolved</span>
-            </div>
-          </CardContent>
-        </Card>
+          );
+        })}
       </div>
 
-      {/* Growth Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Daily Growth Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgDailyUsers.toFixed(1)}</div>
-            <div className="text-xs text-muted-foreground">Users per day</div>
-            <div className="text-xs text-green-600 mt-1">
-              Posts: {avgDailyPosts.toFixed(1)}/day
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Engagement</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeUsers}</div>
-            <div className="text-xs text-muted-foreground">Engaged users</div>
-            <div className="text-xs text-blue-600 mt-1">
-              {totalUsers > 0 ? ((activeUsers / totalUsers) * 100).toFixed(1) : 0}% of total
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Mentorship Duration</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatDuration(avgMentorshipDuration)}</div>
-            <div className="text-xs text-muted-foreground">For completed ones</div>
-            <div className="text-xs text-purple-600 mt-1">
-              {completedMentorships} completed
-            </div>
-          </CardContent>
-        </Card>
+      {/* Growth metrics */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Daily User Growth", value: avgDailyUsers.toFixed(1), sub: `Posts: ${avgDailyPosts.toFixed(1)}/day`, accent: "text-blue-400" },
+          {
+            label: "Active Engagement",
+            value: activeUsers,
+            sub: `${totalUsers > 0 ? ((activeUsers / totalUsers) * 100).toFixed(1) : 0}% of total`,
+            accent: "text-violet-400",
+          },
+          {
+            label: "Avg Mentorship Duration",
+            value: formatDuration(avgMentorshipDuration),
+            sub: `${completedMentorships} completed`,
+            accent: "text-emerald-400",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="bg-white/[0.03] border border-white/10 rounded-2xl p-4"
+          >
+            <p className="text-white/40 text-xs mb-1">{s.label}</p>
+            <p className={`text-2xl font-bold ${s.accent} mb-1`}>{s.value}</p>
+            <p className="text-xs text-white/30">{s.sub}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Content Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Top Performing Posts
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              {mostLikedPosts.slice(0, 5).map((post: any, index: number) => (
-                <div key={post._id} className="flex items-start justify-between p-3 bg-muted rounded-lg gap-3">
+      {/* Content performance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Section title="Top Performing Posts (by Likes)">
+          <div className="space-y-2">
+            {mostLikedPosts.length === 0 ? (
+              <p className="text-white/30 text-sm text-center py-4">No posts with likes yet</p>
+            ) : (
+              mostLikedPosts.map((post: any) => (
+                <div
+                  key={post._id}
+                  className="flex items-start justify-between gap-3 p-3 bg-white/5 border border-white/8 rounded-xl"
+                >
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate" title={post.title}>
-                      {post.title}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      <div className="truncate" title={`by ${post.authorName || 'Unknown'} • ${formatDate(post.createdAt)}`}>
-                        by {post.authorName || 'Unknown'} • {formatDate(post.createdAt)}
-                      </div>
-                    </div>
+                    <p className="text-sm text-white font-medium truncate">{post.title}</p>
+                    <p className="text-xs text-white/35 truncate mt-0.5">
+                      by {post.authorName || "Unknown"} · {formatDate(post.createdAt)}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                    <Heart className="h-4 w-4 text-red-500" />
-                    <span className="font-semibold">{post.likeCount || 0}</span>
+                  <div className="flex items-center gap-1.5 text-sm flex-shrink-0">
+                    <Heart className="h-3.5 w-3.5 text-red-400" />
+                    <span className="font-semibold text-white">{post.likeCount || 0}</span>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Section>
+
+        <Section title="Most Viewed Posts">
+          <div className="space-y-2">
+            {mostViewedPosts.length === 0 ? (
+              <p className="text-white/30 text-sm text-center py-4">No posts with views yet</p>
+            ) : (
+              mostViewedPosts.map((post: any) => (
+                <div
+                  key={post._id}
+                  className="flex items-start justify-between gap-3 p-3 bg-white/5 border border-white/8 rounded-xl"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{post.title}</p>
+                    <p className="text-xs text-white/35 truncate mt-0.5">
+                      by {post.authorName || "Unknown"} · {formatDate(post.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm flex-shrink-0">
+                    <Eye className="h-3.5 w-3.5 text-blue-400" />
+                    <span className="font-semibold text-white">{post.viewCount || 0}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Section>
+      </div>
+
+      {/* Distribution grids */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Section title="User Distribution">
+          <StatRow label="Mentors" value={mentors} accent="bg-blue-500" badge={`${((mentors / (totalUsers || 1)) * 100).toFixed(1)}%`} />
+          <StatRow label="Mentees" value={mentees} accent="bg-emerald-500" badge={`${((mentees / (totalUsers || 1)) * 100).toFixed(1)}%`} />
+          <StatRow label="Both Roles" value={bothRoles} accent="bg-violet-500" badge={`${((bothRoles / (totalUsers || 1)) * 100).toFixed(1)}%`} />
+          <StatRow label="Admins" value={totalAdmins} accent="bg-amber-500" badge={`${((totalAdmins / (totalUsers || 1)) * 100).toFixed(1)}%`} />
+        </Section>
+
+        <Section title="Mentorship Status">
+          <StatRow label="Active" value={activeMentorships} accent="bg-emerald-500" badge="Live" />
+          <StatRow label="Pending" value={pendingMentorships} accent="bg-amber-500" badge="Waiting" />
+          <StatRow label="Completed" value={completedMentorships} accent="bg-blue-500" badge="Done" />
+          <StatRow label="Success Rate" value={`${successRate}%`} />
+        </Section>
+      </div>
+
+      {/* Support + Blog analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Section title="Support Case Status">
+          <StatRow label="Open" value={openCases} accent="bg-red-500" badge="Needs Attention" />
+          <StatRow label="In Progress" value={inProgressCases} accent="bg-amber-500" badge="Working" />
+          <StatRow label="Resolved" value={resolvedCases} accent="bg-emerald-500" badge="Done" />
+          <StatRow label="Closed" value={closedCases} accent="bg-white/30" badge="Archived" />
+          <StatRow label="Urgent" value={urgentCases} accent="bg-red-600" badge="High Priority" />
+          <StatRow
+            label="Resolution Rate"
+            value={`${totalCases > 0 ? ((resolvedCases / totalCases) * 100).toFixed(1) : 0}%`}
+          />
+        </Section>
+
+        <Section title="Blog Content">
+          <StatRow label="Published Posts" value={publishedPosts} badge={`${totalPosts > 0 ? ((publishedPosts / totalPosts) * 100).toFixed(1) : 0}%`} />
+          <StatRow label="Draft Posts" value={draftPosts} badge={`${totalPosts > 0 ? ((draftPosts / totalPosts) * 100).toFixed(1) : 0}%`} />
+          <StatRow label="Total Likes" value={totalLikes.toLocaleString()} />
+          <StatRow label="Total Views" value={totalViews.toLocaleString()} />
+          <StatRow label="Avg Likes/Post" value={avgLikesPerPost} />
+          <StatRow label="Avg Views/Post" value={avgViewsPerPost} />
+        </Section>
+      </div>
+
+      {/* Platform health */}
+      <Section title="Platform Health & Activity">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <p className="text-white/45 text-xs font-semibold uppercase tracking-widest mb-3">
+              Daily Averages (30 days)
+            </p>
+            <div className="space-y-2">
+              {[
+                { label: "New Users", value: avgDailyUsers.toFixed(1) },
+                { label: "New Posts", value: avgDailyPosts.toFixed(1) },
+                { label: "New Mentorships", value: avgDailyMentorships.toFixed(1) },
+              ].map((r) => (
+                <div key={r.label} className="flex justify-between text-sm">
+                  <span className="text-white/40">{r.label}</span>
+                  <span className="font-semibold text-white">{r.value}</span>
                 </div>
               ))}
-              {mostLikedPosts.length === 0 && (
-                <div className="text-center text-muted-foreground py-4">
-                  No posts with likes yet
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Most Viewed Posts
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              {mostViewedPosts.slice(0, 5).map((post: any, index: number) => (
-                <div key={post._id} className="flex items-start justify-between p-3 bg-muted rounded-lg gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate" title={post.title}>
-                      {post.title}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      <div className="truncate" title={`by ${post.authorName || 'Unknown'} • ${formatDate(post.createdAt)}`}>
-                        by {post.authorName || 'Unknown'} • {formatDate(post.createdAt)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                    <Eye className="h-4 w-4 text-blue-500" />
-                    <span className="font-semibold">{post.viewCount || 0}</span>
-                  </div>
-                </div>
-              ))}
-              {mostViewedPosts.length === 0 && (
-                <div className="text-center text-muted-foreground py-4">
-                  No posts with views yet
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* User Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              User Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm">Mentors</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{mentors}</span>
-                  <Badge variant="outline">{((mentors / totalUsers) * 100).toFixed(1)}%</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Mentees</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{mentees}</span>
-                  <Badge variant="outline">{((mentees / totalUsers) * 100).toFixed(1)}%</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  <span className="text-sm">Both Roles</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{bothRoles}</span>
-                  <Badge variant="outline">{((bothRoles / totalUsers) * 100).toFixed(1)}%</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm">Admins</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{totalAdmins}</span>
-                  <Badge variant="outline">{((totalAdmins / totalUsers) * 100).toFixed(1)}%</Badge>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Mentorship Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Active</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{activeMentorships}</span>
-                  <Badge variant="outline" className="text-green-600">Live</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm">Pending</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{pendingMentorships}</span>
-                  <Badge variant="outline" className="text-yellow-600">Waiting</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm">Completed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{completedMentorships}</span>
-                  <Badge variant="outline" className="text-blue-600">Done</Badge>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Support Cases Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Headphones className="h-5 w-5" />
-              Support Case Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm">Open</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{openCases}</span>
-                  <Badge variant="outline" className="text-red-600">Needs Attention</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm">In Progress</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{inProgressCases}</span>
-                  <Badge variant="outline" className="text-yellow-600">Working</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Resolved</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{resolvedCases}</span>
-                  <Badge variant="outline" className="text-green-600">Completed</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                  <span className="text-sm">Closed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{closedCases}</span>
-                  <Badge variant="outline" className="text-gray-600">Archived</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  <span className="text-sm">Urgent</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-red-600">{urgentCases}</span>
-                  <Badge variant="outline" className="text-red-600">High Priority</Badge>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Support Case Metrics
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Total Cases</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{totalCases}</span>
-                  <Badge variant="outline">All time</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Resolution Rate</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-green-600">
-                    {totalCases > 0 ? ((resolvedCases / totalCases) * 100).toFixed(1) : 0}%
-                  </span>
-                  <Badge variant="outline" className="text-green-600">Success</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Active Cases</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-orange-600">{openCases + inProgressCases}</span>
-                  <Badge variant="outline" className="text-orange-600">Pending</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Urgent Cases</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-red-600">{urgentCases}</span>
-                  <Badge variant="outline" className="text-red-600">Immediate</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Avg Resolution Time</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">--</span>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Content Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Blog Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Published Posts</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{publishedPosts}</span>
-                  <Badge variant="outline">{totalPosts > 0 ? ((publishedPosts / totalPosts) * 100).toFixed(1) : 0}%</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Draft Posts</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{draftPosts}</span>
-                  <Badge variant="outline">{totalPosts > 0 ? ((draftPosts / totalPosts) * 100).toFixed(1) : 0}%</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Total Likes</span>
-                <div className="flex items-center gap-2">
-                  <Heart className="h-4 w-4 text-red-500" />
-                  <span className="font-semibold">{totalLikes.toLocaleString()}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Total Views</span>
-                <div className="flex items-center gap-2">
-                  <Eye className="h-4 w-4 text-blue-500" />
-                  <span className="font-semibold">{totalViews.toLocaleString()}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Avg Likes/Post</span>
-                <span className="font-semibold">{avgLikesPerPost}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Avg Views/Post</span>
-                <span className="font-semibold">{avgViewsPerPost}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              Reports & Moderation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Total Reports</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{pendingReports}</span>
-                  <Badge variant="outline">Pending</Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Action Required</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-orange-600">{pendingReports}</span>
-                  <Badge variant="outline" className="text-orange-600">Review needed</Badge>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* User Retention & Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            User Retention & Activity Patterns
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Daily Activity */}
-            <div>
-              <h4 className="font-semibold mb-3">Daily Averages (Last 30 Days)</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">New Users</span>
-                  <span className="font-semibold">{avgDailyUsers.toFixed(1)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">New Posts</span>
-                  <span className="font-semibold">{avgDailyPosts.toFixed(1)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">New Mentorships</span>
-                  <span className="font-semibold">{avgDailyMentorships.toFixed(1)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* User Engagement */}
-            <div>
-              <h4 className="font-semibold mb-3">Engagement Metrics</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Content Creators</span>
-                  <span className="font-semibold">{usersWithPosts}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Mentorship Participants</span>
-                  <span className="font-semibold">{usersInMentorships}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Engagement Rate</span>
-                  <span className="font-semibold">
-                    {totalUsers > 0 ? ((activeUsers / totalUsers) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Platform Health */}
-            <div>
-              <h4 className="font-semibold mb-3">Platform Health</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Success Rate</span>
-                  <span className="font-semibold text-green-600">{successRate}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Avg Duration</span>
-                  <span className="font-semibold">{formatDuration(avgMentorshipDuration)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Total Topics</span>
-                  <span className="font-semibold">{totalTopics}</span>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Activity Timeline */}
-          <div className="mt-6 pt-6 border-t">
-            <h4 className="font-semibold mb-3">Recent Activity Timeline</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">Top Activity Days (Users)</h5>
-                <div className="space-y-1">
-                  {Object.entries(usersByDay)
-                    .sort(([,a], [,b]) => b - a)
-                    .slice(0, 5)
-                    .map(([day, count]) => (
-                      <div key={day} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{day}</span>
-                        <span className="font-semibold">{count} users</span>
-                      </div>
-                    ))}
+          <div>
+            <p className="text-white/45 text-xs font-semibold uppercase tracking-widest mb-3">
+              Engagement
+            </p>
+            <div className="space-y-2">
+              {[
+                { label: "Content Creators", value: usersWithPosts },
+                { label: "Mentorship Participants", value: usersInMentorships },
+                { label: "Engagement Rate", value: `${totalUsers > 0 ? ((activeUsers / totalUsers) * 100).toFixed(1) : 0}%` },
+              ].map((r) => (
+                <div key={r.label} className="flex justify-between text-sm">
+                  <span className="text-white/40">{r.label}</span>
+                  <span className="font-semibold text-white">{r.value}</span>
                 </div>
-              </div>
-              <div>
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">Top Activity Days (Posts)</h5>
-                <div className="space-y-1">
-                  {Object.entries(postsByDay)
-                    .sort(([,a], [,b]) => b - a)
-                    .slice(0, 5)
-                    .map(([day, count]) => (
-                      <div key={day} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{day}</span>
-                        <span className="font-semibold">{count} posts</span>
-                      </div>
-                    ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div>
+            <p className="text-white/45 text-xs font-semibold uppercase tracking-widest mb-3">
+              Platform Stats
+            </p>
+            <div className="space-y-2">
+              {[
+                { label: "Success Rate", value: `${successRate}%` },
+                { label: "Avg Duration", value: formatDuration(avgMentorshipDuration) },
+                { label: "Total Topics", value: totalTopics },
+              ].map((r) => (
+                <div key={r.label} className="flex justify-between text-sm">
+                  <span className="text-white/40">{r.label}</span>
+                  <span className="font-semibold text-white">{r.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 pt-5 border-t border-white/8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p className="text-white/45 text-xs font-semibold uppercase tracking-widest mb-3">
+              Top Activity Days (Users)
+            </p>
+            <div className="space-y-1.5">
+              {Object.entries(usersByDay)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5)
+                .map(([day, count]) => (
+                  <div key={day} className="flex justify-between text-sm">
+                    <span className="text-white/40">{day}</span>
+                    <span className="font-semibold text-white">{count} users</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-white/45 text-xs font-semibold uppercase tracking-widest mb-3">
+              Top Activity Days (Posts)
+            </p>
+            <div className="space-y-1.5">
+              {Object.entries(postsByDay)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5)
+                .map(([day, count]) => (
+                  <div key={day} className="flex justify-between text-sm">
+                    <span className="text-white/40">{day}</span>
+                    <span className="font-semibold text-white">{count} posts</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      </Section>
     </div>
   );
 }

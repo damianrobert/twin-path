@@ -4,11 +4,9 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { 
-  AlertTriangle, 
-  Users, 
+import {
+  AlertTriangle,
+  Users,
   Settings,
   ArrowRight,
   Shield,
@@ -25,42 +23,34 @@ export default function AdminHomePage() {
   const adminUsers = useQuery(api.admin.getAdminUsers);
   const allUsers = useQuery(api.admin.getAllUsers);
   const supportStats = useQuery(api.supportCases.getSupportCaseStatistics);
-  
-  // Handle admin access errors - ALWAYS call this hook
+
   useConvexErrorHandler();
 
-  // Calculate render conditions after all hooks are called
   const shouldShowAccessDenied = isAdmin === false;
   const shouldShowLoading = isAdmin === undefined;
 
-  // Show access denied
   if (shouldShowAccessDenied) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center py-12">
-          <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
-          <p className="text-muted-foreground mb-6">
-            You don't have admin privileges to access this area.
-          </p>
-          <Link href="/dashboard">
-            <Button>
-              Back to Dashboard
-            </Button>
-          </Link>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-6">
+          <Shield className="h-7 w-7 text-white/25" />
         </div>
+        <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+        <p className="text-white/40 mb-6">You don't have admin privileges to access this area.</p>
+        <Link href="/dashboard">
+          <button className="px-5 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors">
+            Back to Dashboard
+          </button>
+        </Link>
       </div>
     );
   }
 
-  // Show loading
   if (shouldShowLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading admin panel...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin h-7 w-7 border-2 border-violet-400 border-t-transparent rounded-full mb-4" />
+        <p className="text-white/35 text-sm">Loading admin panel...</p>
       </div>
     );
   }
@@ -71,163 +61,113 @@ export default function AdminHomePage() {
       description: "Review and manage user-reported blog posts",
       icon: AlertTriangle,
       href: "/admin/blog-reports",
-      color: "text-orange-600 dark:text-orange-400",
-      bgColor: "bg-orange-50 dark:bg-orange-950/20",
+      accent: "text-amber-400",
+      accentBg: "bg-amber-500/10 border-amber-500/20",
     },
     {
       title: "User Management",
       description: "Manage admin rights and user accounts",
       icon: Users,
       href: "/admin/users",
-      color: "text-blue-600 dark:text-blue-400",
-      bgColor: "bg-blue-50 dark:bg-blue-950/20",
-    },
-    {
-      title: "Settings",
-      description: "Platform settings and configuration",
-      icon: Settings,
-      href: "/admin/settings",
-      color: "text-gray-600 dark:text-gray-400",
-      bgColor: "bg-gray-50 dark:bg-gray-950/20",
-      disabled: false,
+      accent: "text-blue-400",
+      accentBg: "bg-blue-500/10 border-blue-500/20",
     },
     {
       title: "Support Cases",
       description: "Manage user support requests",
       icon: Headphones,
       href: "/admin/support",
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-50 dark:bg-purple-950/20",
-      disabled: false,
+      accent: "text-violet-400",
+      accentBg: "bg-violet-500/10 border-violet-500/20",
+    },
+    {
+      title: "Settings",
+      description: "Platform settings and configuration",
+      icon: Settings,
+      href: "/admin/settings",
+      accent: "text-white/50",
+      accentBg: "bg-white/5 border-white/10",
     },
   ];
 
+  const quickStats = [
+    { label: "Pending Reports", value: pendingReports?.length ?? 0, accent: "text-amber-400" },
+    { label: "Admin Users", value: adminUsers?.length ?? 0, accent: "text-violet-400" },
+    { label: "Total Users", value: allUsers?.length ?? 0, accent: "text-emerald-400" },
+    { label: "Open Cases", value: supportStats?.opened ?? 0, accent: "text-blue-400" },
+    { label: "In Progress", value: supportStats?.inProgress ?? 0, accent: "text-amber-400" },
+    { label: "Resolved", value: supportStats?.resolved ?? 0, accent: "text-emerald-400" },
+    { label: "Total Cases", value: supportStats?.total ?? 0, accent: "text-white/60" },
+    { label: "Urgent Cases", value: supportStats?.byPriority?.urgent ?? 0, accent: "text-red-400" },
+  ];
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-          Admin Dashboard
-        </h1>
-        <p className="text-muted-foreground">
-          Manage your TwinPath platform
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <p className="text-white/35 text-xs font-semibold uppercase tracking-widest mb-2">
+          Overview
         </p>
+        <h1 className="text-3xl font-bold text-white">
+          Admin{" "}
+          <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
+            Dashboard
+          </span>
+        </h1>
+        <p className="text-white/40 mt-1">Manage your TwinPath platform</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Navigation cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {adminCards.map((card) => {
           const Icon = card.icon;
-          const openCasesCount = card.title === "Support Cases" ? supportStats?.opened || 0 : 0;
-          
+          const openCasesCount =
+            card.title === "Support Cases" ? supportStats?.opened || 0 : 0;
+
           return (
-            <Card 
-              key={card.title} 
-              className={`hover:shadow-lg transition-shadow cursor-pointer relative ${
-                card.disabled ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              onClick={() => !card.disabled && router.push(card.href)}
+            <div
+              key={card.title}
+              onClick={() => router.push(card.href)}
+              className="group relative bg-white/[0.03] border border-white/10 rounded-3xl p-6 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-lg hover:shadow-black/20 transition-all duration-300 cursor-pointer"
             >
-              {card.title === "Support Cases" && openCasesCount > 0 && (
-                <div className="absolute top-4 right-4 z-10">
-                  <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              {openCasesCount > 0 && (
+                <div className="absolute top-5 right-5">
+                  <div className="flex items-center gap-1 bg-violet-500/20 border border-violet-500/30 text-violet-300 text-xs font-bold px-2 py-1 rounded-full">
                     <Bell className="h-3 w-3" />
                     {openCasesCount}
                   </div>
                 </div>
               )}
-              <CardHeader>
-                <div className={`w-12 h-12 rounded-lg ${card.bgColor} flex items-center justify-center mb-4`}>
-                  <Icon className={`h-6 w-6 ${card.color}`} />
-                </div>
-                <CardTitle className="flex items-center gap-2">
-                  {card.title}
-                  {card.disabled && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                      Coming Soon
-                    </span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  {card.description}
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  disabled={card.disabled}
-                >
-                  {card.disabled ? "Coming Soon" : (
-                    <>
-                      Manage
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+              <div className={`w-11 h-11 ${card.accentBg} border rounded-2xl flex items-center justify-center mb-4`}>
+                <Icon className={`h-5 w-5 ${card.accent}`} />
+              </div>
+              <h3 className="font-semibold text-white text-base mb-1">{card.title}</h3>
+              <p className="text-white/40 text-sm mb-4">{card.description}</p>
+              <div className="flex items-center gap-1.5 text-xs text-white/35 group-hover:text-violet-400 transition-colors">
+                Manage
+                <ArrowRight className="h-3.5 w-3.5" />
+              </div>
+            </div>
           );
         })}
       </div>
 
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                  {pendingReports?.length || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Pending Reports</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {adminUsers?.length || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Admin Users</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {allUsers?.length || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Total Users</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {supportStats?.opened || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Open Cases</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                  {supportStats?.inProgress || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">In Progress</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                  {supportStats?.resolved || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Resolved</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                  {supportStats?.total || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Total Cases</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                  {supportStats?.byPriority?.urgent || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Urgent Cases</div>
-              </div>
+      {/* Quick stats */}
+      <div>
+        <p className="text-white/35 text-xs font-semibold uppercase tracking-widest mb-4">
+          Quick Stats
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {quickStats.map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 text-center"
+            >
+              <div className={`text-2xl font-bold ${stat.accent} mb-1`}>{stat.value}</div>
+              <div className="text-xs text-white/35">{stat.label}</div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

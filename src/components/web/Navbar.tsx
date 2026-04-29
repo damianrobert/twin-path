@@ -5,9 +5,9 @@ import { Button } from "../ui/button";
 import { useConvexAuth } from "convex/react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import Logo from "./Logo";
 import GlobalAvatar from "./GlobalAvatar";
 import { useQuery, useMutation } from "convex/react";
@@ -36,6 +36,8 @@ const navLinks = [
 const Navbar = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const isLumenActive = pathname?.startsWith("/lumen");
   const [isPending, startTransition] = useTransition();
   const unreadRequestCount = useQuery(api.mentorshipRequests.getUnreadRequestCount);
   const updateOnlineStatus = useMutation(api.presence.updateOnlineStatus);
@@ -67,6 +69,17 @@ const Navbar = () => {
                 )}
               </Link>
             )}
+            <Link
+              href="/lumen"
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-all ${
+                isLumenActive
+                  ? "bg-violet-500/20 border border-violet-500/30 text-violet-300"
+                  : "text-white/55 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Lumen
+            </Link>
           </div>
         </div>
 
